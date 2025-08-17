@@ -1,0 +1,178 @@
+/* QRScanPage.css */
+
+/*
+  Đây là file CSS được tạo riêng để hỗ trợ component QRScanPage.
+  Bạn có thể import file này vào component React của mình.
+  Ví dụ: import './QRScanPage.css';
+*/
+
+/* Reset và cấu hình chung */
+.min-h-screen {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Kiểu dáng cho tiêu đề và phần hướng dẫn */
+.text-center {
+  color: #374151; /* gray-800 */
+}
+
+.text-gray-600 {
+  color: #4b5563;
+}
+
+/* Khu vực quét QR */
+.rounded-2xl {
+  border-radius: 1rem;
+}
+
+.shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.aspect-square {
+  position: relative;
+  width: 100%;
+  padding-top: 100%; /* Tạo tỷ lệ 1:1 */
+}
+
+.aspect-square > div {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.aspect-square .bg-gray-50 {
+  background-color: #f9fafb;
+}
+
+.aspect-square .text-gray-400 {
+  color: #9ca3af;
+}
+
+/* Khung quét */
+.scanning-overlay .border-2 {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.scanning-overlay .border-blue-500 {
+  border-color: #3b82f6;
+}
+
+/* Animation đường quét */
+@keyframes scan-line {
+  0% {
+    top: 0;
+  }
+  50% {
+    top: calc(100% - 4px); /* Chiều cao của đường quét là 4px */
+  }
+  100% {
+    top: 0;
+  }
+}
+
+.animate-pulse {
+  animation: scan-line 2s infinite linear;
+}
+
+/* Nút điều khiển */
+.bg-blue-600 {
+  background-color: #2563eb;
+}
+
+.bg-blue-600:hover {
+  background-color: #1d4ed8;
+}
+
+.bg-red-600 {
+  background-color: #dc2626;
+}
+
+.bg-red-600:hover {
+  background-color: #b91c1c;
+}
+
+.bg-gray-600 {
+  background-color: #4b5563;
+}
+
+.bg-gray-600:hover {
+  background-color: #374151;
+}
+
+.rounded-xl {
+  border-radius: 0.75rem;
+}
+
+.transition-colors {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: 200ms;
+}
+
+/* Kết quả quét */
+.text-green-500 {
+  color: #22c55e;
+}
+
+.text-red-500 {
+  color: #ef4444;
+}
+
+.bg-gray-50 {
+  background-color: #f9fafb;
+}
+
+.bg-red-50 {
+  background-color: #fef2f2;
+}
+
+/* Hướng dẫn sử dụng */
+.bg-white {
+  background-color: #fff;
+}
+
+.rounded-xl {
+  border-radius: 0.75rem;
+}
+
+.shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.bg-blue-100 {
+  background-color: #dbeafe;
+}
+
+.text-blue-600 {
+  color: #2563eb;
+}
+
+.space-y-2 > li {
+  margin-top: 0.5rem;
+}
+
+.space-y-2 > li:first-child {
+  margin-top: 0;
+}
+
+.flex-shrink-0 {
+  flex-shrink: 0;
+}
+
+/* Đảm bảo video chiếm toàn bộ không gian trong container */
+video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Hiệu ứng khi hover vào nút đèn pin và nút dừng */
+.p-3 {
+  padding: 0.75rem;
+}
+
+.rounded-full {
+  border-radius: 9999px;
+}

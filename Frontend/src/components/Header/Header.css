@@ -1,0 +1,87 @@
+.header {
+  position: fixed; /* Cố định header trên cùng */
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: #2ecc71;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  z-index: 1000; /* Luôn nằm trên các phần khác */
+  color: white;
+}
+
+/* Để tránh nội dung bị che bởi header */
+.main-content {
+  padding-top: 56px; 
+}
+.header {
+  display: flex;
+  align-items: center;
+  background-color: #2ecc71;
+  padding: 8px 16px;
+  color: white;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  font-weight: bold;
+  margin-right: 16px;
+}
+
+.header-search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+
+
+.header-search input {
+  border: none;
+  outline: none;
+  background: transparent;
+  margin-left: 8px;
+  color: white;
+  width: 100%;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.login-btn {
+  background: white;
+  color: #2ecc71;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.login-btn:hover {
+  background: #ecf0f1;
+}
+
+.register-btn {
+  background: #ffffff;
+  color: #2ecc71;
+  border: 2px solid white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.register-btn:hover {
+  background: #27ae60;
+  color: white;
+}
