@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thông báo bảo hành</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+        }
+        .content {
+            background: #f9f9f9;
+            padding: 30px;
+            border-radius: 0 0 10px 10px;
+        }
+        .warranty-info {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #9b59b6;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #9b59b6;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .highlight {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #28a745;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 14px;
+        }
+        .logo {
+            max-width: 150px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img th:src="${logoUrl}" alt="CRM Mobile Store" class="logo" />
+        <h1>🛡️ Thông báo bảo hành</h1>
+    </div>
+
+    <div class="content">
+        <h2>Xin chào <span th:text="${customerName}">Customer</span>!</h2>
+
+        <p>Chúng tôi gửi bạn thông tin bảo hành cho sản phẩm <strong th:text="${productName}">Product Name</strong> mà bạn đã mua tại CRM Mobile Store.</p>
+
+        <div class="warranty-info">
+            <h3>🔧 Thông tin bảo hành</h3>
+            <div th:utext="${warrantyInfo}">
+                <p><strong>Sản phẩm:</strong> iPhone 15 Pro Max</p>
+                <p><strong>Ngày mua:</strong> 01/01/2024</p>
+                <p><strong>Thời gian bảo hành:</strong> 12 tháng</p>
+                <p><strong>Ngày hết hạn:</strong> 01/01/2025</p>
+            </div>
+        </div>
+
+        <div class="highlight">
+            <h4>📋 Chính sách bảo hành:</h4>
+            <ul>
+                <li>✅ Bảo hành miễn phí các lỗi kỹ thuật do nhà sản xuất</li>
+                <li>✅ Hỗ trợ sửa chữa và thay thế linh kiện chính hãng</li>
+                <li>✅ Bảo hành tại tất cả các trung tâm bảo hành uỷ quyền</li>
+                <li>❌ Không bảo hành các lỗi do người dùng gây ra</li>
+            </ul>
+        </div>
+
+        <p><strong>📍 Trung tâm bảo hành gần bạn:</strong></p>
+        <ul>
+            <li>CRM Mobile Store - Chi nhánh 1: 123 Nguyễn Văn A, Q.1, TP.HCM</li>
+            <li>CRM Mobile Store - Chi nhánh 2: 456 Trần Hưng Đạo, Q.5, TP.HCM</li>
+            <li>Hotline bảo hành: <strong>1900-xxxx</strong></li>
+        </ul>
+
+        <div style="text-align: center;">
+            <a th:href="${baseUrl + '/warranty'}" class="button">Tra cứu bảo hành</a>
+        </div>
+
+        <p><strong>Chuẩn bị khi đến bảo hành:</strong></p>
+        <ul>
+            <li>📄 Hóa đơn mua hàng (bản gốc hoặc photo)</li>
+            <li>📱 Sản phẩm cần bảo hành</li>
+            <li>🆔 Giấy tờ tùy thân</li>
+        </ul>
+
+        <p>Nếu bạn có bất kỳ thắc mắc nào về bảo hành, vui lòng liên hệ với chúng tôi qua:</p>
+        <p>📞 Hotline: <strong>1900-xxxx</strong> (8:00 - 22:00)<br>
+        📧 Email: warranty@crmmobilestore.com</p>
+
+        <p>Cảm ơn bạn đã tin tưởng sử dụng dịch vụ của CRM Mobile Store!</p>
+
+        <p>Trân trọng,<br>
+        <strong>Đội ngũ CRM Mobile Store</strong></p>
+    </div>
+
+    <div class="footer">
+        <p>Email này được gửi tự động. Vui lòng không trả lời email này.</p>
+        <p>© 2024 CRM Mobile Store. All rights reserved.</p>
+    </div>
+</body>
+</html>
+

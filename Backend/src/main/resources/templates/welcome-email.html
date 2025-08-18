@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chào mừng đến với CRM Mobile Store</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+        }
+        .content {
+            background: #f9f9f9;
+            padding: 30px;
+            border-radius: 0 0 10px 10px;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 14px;
+        }
+        .logo {
+            max-width: 150px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img th:src="${logoUrl}" alt="CRM Mobile Store" class="logo" />
+        <h1>Chào mừng bạn đến với CRM Mobile Store!</h1>
+    </div>
+
+    <div class="content">
+        <h2>Xin chào <span th:text="${userName}">User</span>!</h2>
+
+        <p>Cảm ơn bạn đã đăng ký tài khoản tại <strong>CRM Mobile Store</strong>. Chúng tôi rất vui mừng chào đón bạn gia nhập cộng đồng khách hàng của chúng tôi.</p>
+
+        <p>Tại CRM Mobile Store, bạn sẽ được:</p>
+        <ul>
+            <li>✅ Mua sắm các sản phẩm điện thoại chính hãng</li>
+            <li>✅ Được hỗ trợ bảo hành tận tình</li>
+            <li>✅ Nhận thông tin khuyến mãi sớm nhất</li>
+            <li>✅ Được tư vấn kỹ thuật chuyên nghiệp</li>
+        </ul>
+
+        <div style="text-align: center;">
+            <a th:href="${baseUrl}" class="button">Khám phá ngay</a>
+        </div>
+
+        <p>Nếu bạn có bất kỳ câu hỏi nào, đừng ngần ngại liên hệ với chúng tôi qua email này hoặc hotline: <strong>1900-xxxx</strong></p>
+
+        <p>Trân trọng,<br>
+        <strong>Đội ngũ CRM Mobile Store</strong></p>
+    </div>
+
+    <div class="footer">
+        <p>Email này được gửi tự động. Vui lòng không trả lời email này.</p>
+        <p>© 2024 CRM Mobile Store. All rights reserved.</p>
+    </div>
+</body>
+</html>
+

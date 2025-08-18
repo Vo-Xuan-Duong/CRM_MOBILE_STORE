@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xác nhận đơn hàng</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+        }
+        .content {
+            background: #f9f9f9;
+            padding: 30px;
+            border-radius: 0 0 10px 10px;
+        }
+        .order-info {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #4CAF50;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 14px;
+        }
+        .logo {
+            max-width: 150px;
+            margin-bottom: 20px;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            background: #4CAF50;
+            color: white;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img th:src="${logoUrl}" alt="CRM Mobile Store" class="logo" />
+        <h1>✅ Đơn hàng đã được xác nhận!</h1>
+    </div>
+
+    <div class="content">
+        <h2>Xin chào <span th:text="${customerName}">Customer</span>!</h2>
+
+        <p>Cảm ơn bạn đã đặt hàng tại <strong>CRM Mobile Store</strong>. Đơn hàng của bạn đã được xác nhận thành công!</p>
+
+        <div class="order-info">
+            <h3>📋 Thông tin đơn hàng</h3>
+            <p><strong>Mã đơn hàng:</strong> <span th:text="${orderNumber}">#ORD123456</span></p>
+            <p><strong>Trạng thái:</strong> <span class="status">Đã xác nhận</span></p>
+            <p><strong>Ngày đặt:</strong> <span th:text="${#dates.format(#dates.createNow(), 'dd/MM/yyyy HH:mm')}">01/01/2024 10:30</span></p>
+
+            <h4>📱 Chi tiết sản phẩm:</h4>
+            <div th:utext="${orderDetails}">
+                <p>iPhone 15 Pro Max - 256GB - Titan Tự nhiên</p>
+                <p>Số lượng: 1</p>
+                <p>Giá: 29.990.000 VND</p>
+            </div>
+        </div>
+
+        <p>📦 <strong>Thời gian giao hàng dự kiến:</strong> 2-3 ngày làm việc</p>
+        <p>📞 <strong>Hotline hỗ trợ:</strong> 1900-xxxx (8:00 - 22:00)</p>
+
+        <div style="text-align: center;">
+            <a th:href="${baseUrl + '/orders/' + orderNumber}" class="button">Theo dõi đơn hàng</a>
+        </div>
+
+        <p><strong>Lưu ý:</strong></p>
+        <ul>
+            <li>Chúng tôi sẽ liên hệ với bạn trước khi giao hàng</li>
+            <li>Vui lòng kiểm tra kỹ sản phẩm khi nhận hàng</li>
+            <li>Bảo hành chính hãng theo quy định của nhà sản xuất</li>
+        </ul>
+
+        <p>Cảm ơn bạn đã tin tưởng và lựa chọn CRM Mobile Store!</p>
+
+        <p>Trân trọng,<br>
+        <strong>Đội ngũ CRM Mobile Store</strong></p>
+    </div>
+
+    <div class="footer">
+        <p>Email này được gửi tự động. Vui lòng không trả lời email này.</p>
+        <p>© 2024 CRM Mobile Store. All rights reserved.</p>
+    </div>
+</body>
+</html>
+
