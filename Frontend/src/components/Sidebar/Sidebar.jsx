@@ -5,7 +5,7 @@ import { NavLink } from "react-router-dom";
 const menuItems = [
   { title: "Trang chủ", icon: <FaHome />, path: "/" },
   { title: "Quản lý khách hàng", icon: <FaUsers />, path: "/customers" },
-  { title: "Quét mã QR/Barcode", icon: <FaQrcode />, path: "/scan" },
+  { title: "Quét mã QR/Barcode", icon: <FaQrcode />, path: "/qr-scan" },
   { title: "Thanh toán", icon: <FaMoneyBillWave />, path: "/payment" },
   { title: "Tra cứu bảo hành", icon: <FaShieldAlt />, path: "/warranty" },
   { title: "Thống kê & báo cáo", icon: <FaChartBar />, path: "/reports" },
@@ -14,9 +14,9 @@ const menuItems = [
   { title: "Cài đặt", icon: <FaCog />, path: "/settings" },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen = false }) {
   return (
-    <div className="sidebar">
+    <div className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-header">📱 Quản lý cửa hàng</div>
       <nav>
         {menuItems.map((item, index) => (

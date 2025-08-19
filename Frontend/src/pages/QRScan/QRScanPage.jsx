@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, X, Flashlight, RotateCcw, CheckCircle, AlertCircle } from 'lucide-react';
+import './QRScanPage.css';
 
 const QRScanPage = () => {
   const [isScanning, setIsScanning] = useState(false);
@@ -15,8 +16,8 @@ const QRScanPage = () => {
   // Request camera permission
   const requestCameraPermission = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
       });
       setHasPermission(true);
       streamRef.current = stream;
@@ -52,7 +53,7 @@ const QRScanPage = () => {
       'WIFI:T:WPA;S:MyNetwork;P:password123;;',
       'Xin chào! Đây là mã QR test.'
     ];
-    
+
     // Simulate random QR detection
     if (Math.random() > 0.95) {
       const randomData = mockQRData[Math.floor(Math.random() * mockQRData.length)];
@@ -66,14 +67,14 @@ const QRScanPage = () => {
   const startScanning = async () => {
     setError(null);
     setScannedData(null);
-    
+
     if (hasPermission === null) {
       await requestCameraPermission();
     }
-    
+
     if (hasPermission !== false) {
       setIsScanning(true);
-      
+
       // Start QR detection interval
       scanIntervalRef.current = setInterval(detectQRCode, 100);
     }
@@ -136,9 +137,9 @@ const QRScanPage = () => {
         return (
           <div className="space-y-2">
             <p className="font-medium text-gray-800">Liên kết:</p>
-            <a 
-              href={data} 
-              target="_blank" 
+            <a
+              href={data}
+              target="_blank"
               rel="noopener noreferrer"
               className="text-blue-600 hover:text-blue-800 underline break-all"
             >
@@ -147,7 +148,7 @@ const QRScanPage = () => {
           </div>
         );
       }
-      
+
       // Check if it's WiFi data
       if (data.startsWith('WIFI:')) {
         const wifiData = data.match(/WIFI:T:(.*?);S:(.*?);P:(.*?);;/);
@@ -164,7 +165,7 @@ const QRScanPage = () => {
           );
         }
       }
-      
+
       // Default text display
       return (
         <div className="space-y-2">
@@ -176,160 +177,130 @@ const QRScanPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-6 max-w-md">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">
-            Quét Mã QR
-          </h1>
-          <p className="text-gray-600">
-            Hướng camera vào mã QR để quét
-          </p>
+    <div className="qr-scan-page">
+      <div className="qr-scan-container">
+        <div className="qr-scan-header">
+          <h1 className="qr-scan-title">Quét Mã QR</h1>
+          <p className="qr-scan-subtitle">Hướng camera vào mã QR để quét</p>
         </div>
 
-        {/* Scanner Area */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-6">
+        <div className="qr-scan-content">
           {!isScanning && !scannedData && !error && (
-            <div className="aspect-square flex flex-col items-center justify-center p-8 bg-gray-50">
-              <Camera className="w-16 h-16 text-gray-400 mb-4" />
-              <p className="text-gray-600 text-center mb-6">
+            <>
+              <div className="qr-scan-icon">
+                📷
+              </div>
+              <p className="qr-scan-instruction">
                 Nhấn nút bên dưới để bắt đầu quét mã QR
               </p>
-            </div>
+              <button
+                onClick={startScanning}
+                className="qr-scan-button"
+              >
+                <Camera />
+                Bắt đầu quét
+              </button>
+            </>
           )}
 
           {isScanning && (
-            <div className="relative aspect-square bg-black">
+            <div className="qr-scanner-active">
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
                 muted
-                className="w-full h-full object-cover"
+                className="qr-scanner-video"
               />
               <canvas
                 ref={canvasRef}
-                className="hidden"
+                style={{ display: 'none' }}
               />
-              
-              {/* Scanning overlay */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="relative w-64 h-64">
-                  <div className="absolute inset-0 border-2 border-white opacity-50 rounded-lg"></div>
-                  <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-blue-500 rounded-tl-lg"></div>
-                  <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-blue-500 rounded-tr-lg"></div>
-                  <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-blue-500 rounded-bl-lg"></div>
-                  <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-blue-500 rounded-br-lg"></div>
-                  
-                  {/* Scanning line animation */}
-                  <div className="absolute inset-x-0 top-0 h-1 bg-blue-500 animate-pulse"></div>
+
+              <div className="qr-scanner-overlay">
+                <div className="qr-scanner-frame">
+                  <div className="qr-scanner-scan-line"></div>
                 </div>
               </div>
 
-              {/* Flash button */}
-              <button
-                onClick={toggleTorch}
-                className={`absolute top-4 right-4 p-3 rounded-full ${
-                  torchEnabled ? 'bg-yellow-500 text-white' : 'bg-black bg-opacity-50 text-white'
-                } hover:bg-opacity-70 transition-colors`}
-              >
-                <Flashlight className="w-5 h-5" />
-              </button>
-
-              {/* Stop button */}
-              <button
-                onClick={stopScanning}
-                className="absolute top-4 left-4 p-3 rounded-full bg-black bg-opacity-50 text-white hover:bg-opacity-70 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="qr-scanner-controls">
+                <button
+                  onClick={stopScanning}
+                  className="qr-scanner-btn"
+                >
+                  <X />
+                </button>
+                <button
+                  onClick={toggleTorch}
+                  className={`qr-scanner-btn flash ${torchEnabled ? 'active' : ''}`}
+                >
+                  <Flashlight />
+                </button>
+              </div>
             </div>
           )}
 
           {scannedData && (
-            <div className="p-6">
-              <div className="flex items-center mb-4">
-                <CheckCircle className="w-6 h-6 text-green-500 mr-2" />
-                <h3 className="text-lg font-semibold text-gray-800">
-                  Quét thành công!
-                </h3>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-4">
+            <div className="qr-scan-results success qr-scan-success">
+              <h3>
+                <CheckCircle />
+                Quét thành công!
+              </h3>
+              <div className="qr-scan-data">
                 {formatScannedData(scannedData)}
               </div>
+              <button
+                onClick={resetScanner}
+                className="qr-scan-button"
+                style={{ marginTop: '1rem' }}
+              >
+                <RotateCcw />
+                Quét lại
+              </button>
             </div>
           )}
 
           {error && (
-            <div className="p-6">
-              <div className="flex items-center mb-4">
-                <AlertCircle className="w-6 h-6 text-red-500 mr-2" />
-                <h3 className="text-lg font-semibold text-gray-800">
-                  Có lỗi xảy ra
-                </h3>
-              </div>
-              <p className="text-gray-600 bg-red-50 p-4 rounded-lg">
+            <div className="qr-scan-results error">
+              <h3>
+                <AlertCircle />
+                Có lỗi xảy ra
+              </h3>
+              <div className="qr-scan-data">
                 {error}
-              </p>
+              </div>
+              <button
+                onClick={resetScanner}
+                className="qr-scan-button"
+                style={{ marginTop: '1rem' }}
+              >
+                <RotateCcw />
+                Thử lại
+              </button>
             </div>
           )}
-        </div>
 
-        {/* Control Buttons */}
-        <div className="space-y-3">
-          {!isScanning && !scannedData && (
-            <button
-              onClick={startScanning}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-xl transition-colors flex items-center justify-center"
-            >
-              <Camera className="w-5 h-5 mr-2" />
-              Bắt đầu quét
-            </button>
-          )}
-
-          {isScanning && (
-            <button
-              onClick={stopScanning}
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-4 px-6 rounded-xl transition-colors flex items-center justify-center"
-            >
-              <X className="w-5 h-5 mr-2" />
-              Dừng quét
-            </button>
-          )}
-
-          {(scannedData || error) && (
-            <button
-              onClick={resetScanner}
-              className="w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold py-4 px-6 rounded-xl transition-colors flex items-center justify-center"
-            >
-              <RotateCcw className="w-5 h-5 mr-2" />
-              Quét lại
-            </button>
-          )}
-        </div>
-
-        {/* Instructions */}
-        <div className="mt-8 bg-white rounded-xl p-6 shadow-lg">
-          <h3 className="font-semibold text-gray-800 mb-3">Hướng dẫn sử dụng:</h3>
-          <ul className="space-y-2 text-gray-600">
-            <li className="flex items-start">
-              <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium mr-3 mt-0.5 flex-shrink-0">1</span>
-              Nhấn nút "Bắt đầu quét" để mở camera
-            </li>
-            <li className="flex items-start">
-              <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium mr-3 mt-0.5 flex-shrink-0">2</span>
-              Hướng camera vào mã QR trong khung vuông
-            </li>
-            <li className="flex items-start">
-              <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium mr-3 mt-0.5 flex-shrink-0">3</span>
-              Đợi hệ thống tự động nhận diện và hiển thị kết quả
-            </li>
-            <li className="flex items-start">
-              <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium mr-3 mt-0.5 flex-shrink-0">4</span>
-              Sử dụng nút đèn flash nếu cần thêm ánh sáng
-            </li>
-          </ul>
+          <div className="qr-scan-instructions">
+            <h3>Hướng dẫn sử dụng:</h3>
+            <ul>
+              <li>
+                <span className="step-number">1</span>
+                <span className="step-text">Nhấn nút "Bắt đầu quét" để mở camera</span>
+              </li>
+              <li>
+                <span className="step-number">2</span>
+                <span className="step-text">Hướng camera vào mã QR trong khung vuông</span>
+              </li>
+              <li>
+                <span className="step-number">3</span>
+                <span className="step-text">Đợi hệ thống tự động nhận diện và hiển thị kết quả</span>
+              </li>
+              <li>
+                <span className="step-number">4</span>
+                <span className="step-text">Sử dụng nút đèn flash nếu cần thêm ánh sáng</span>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>

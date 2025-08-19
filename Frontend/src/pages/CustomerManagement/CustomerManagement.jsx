@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Users, UserPlus, QrCode, Search, Filter, Edit, Eye, Trash2, 
-  Plus, Download, Upload, MoreVertical, X, ChevronLeft, ChevronRight, 
-  Phone, Mail, MapPin, Calendar, TrendingUp, AlertCircle, FileText,
-  Building, Star, Clock, CheckCircle, XCircle
+import {
+  Users, UserPlus, QrCode, Search, Edit, Eye, Trash2,
+  Download, Upload, X, ChevronLeft, ChevronRight,
+  Phone, Mail, MapPin, TrendingUp, Star, CheckCircle, XCircle
 } from 'lucide-react';
 import CustomerForm from './CustomerForm/CustomerForm';
 import CustomerDetailModal from './CustomerDetailModal/CustomerDetailModal';
+import './CustomerManagement.css';
 
 const CustomerManagement = () => {
   // States chính
@@ -105,12 +105,12 @@ const CustomerManagement = () => {
     filtered.sort((a, b) => {
       let aValue = a[sortBy];
       let bValue = b[sortBy];
-      
+
       if (typeof aValue === 'string') {
         aValue = aValue.toLowerCase();
         bValue = bValue.toLowerCase();
       }
-      
+
       if (sortOrder === 'asc') {
         return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
       } else {
@@ -190,7 +190,7 @@ const CustomerManagement = () => {
 
   const handleBulkDelete = () => {
     if (selectedCustomers.length === 0) return;
-    
+
     if (window.confirm(`Bạn có chắc chắn muốn xóa ${selectedCustomers.length} khách hàng đã chọn?`)) {
       setCustomers(prev => prev.filter(customer => !selectedCustomers.includes(customer.id)));
       setSelectedCustomers([]);
@@ -229,7 +229,7 @@ const CustomerManagement = () => {
         const csv = event.target.result;
         const lines = csv.split('\n');
         const headers = lines[0].split(',');
-        
+
         const importedCustomers = lines.slice(1)
           .filter(line => line.trim())
           .map((line, index) => {
@@ -273,179 +273,133 @@ const CustomerManagement = () => {
   };
 
   const getStatusBadge = (status) => {
-    const statusConfig = {
-      active: { color: 'bg-green-100 text-green-800', icon: CheckCircle, text: 'Hoạt động' },
-      inactive: { color: 'bg-red-100 text-red-800', icon: XCircle, text: 'Không hoạt động' }
-    };
-    
-    const config = statusConfig[status] || statusConfig.inactive;
-    const IconComponent = config.icon;
-    
+    const isActive = status === 'active';
+    const IconComponent = isActive ? CheckCircle : XCircle;
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
-        <IconComponent className="h-3 w-3 mr-1" />
-        {config.text}
+      <span className={`status-badge ${isActive ? 'active' : 'inactive'}`}>
+        <IconComponent />
+        {isActive ? 'VIP' : 'Thường'}
       </span>
     );
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen" id="customer-management-page">
-      {/* Header */}
-      <div className="mb-8" id="customer-header-section">
-        <div className="flex items-center justify-between mb-4" id="customer-title-row">
-          <div id="customer-title-group">
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center" id="customer-main-title">
-              <Users className="h-8 w-8 mr-3 text-blue-600" id="customer-icon" />
-              Quản lý Khách hàng
+    <div className="customer-management" id="customer-management-page">
+      <div className="customer-header">
+        <div className="header-section" id="customer-title-row">
+          <div className="title-group" id="customer-title-group">
+            <h1 id="customer-main-title">
+              <Users />
+              Quản lý khách hàng
             </h1>
-            <p className="text-gray-600 mt-1" id="customer-count-text">
-              Tổng cộng {filteredCustomers.length} khách hàng
-            </p>
+            <p id="customer-count-text">Tổng số: {filteredCustomers.length} khách hàng</p>
           </div>
-          
-          <div className="flex items-center space-x-3" id="customer-action-buttons">
-            <button
-              onClick={handleAddCustomer}
-              className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-              id="add-customer-button"
-            >
-              <UserPlus className="h-4 w-4 mr-2" />
-              Thêm khách hàng
+          <div className="action-buttons" id="customer-action-buttons">
+            <button className="btn btn-success" onClick={() => window.location.href = '/qr-scan'}>
+              <QrCode /> Quét QR
             </button>
-            
-            <div className="flex items-center space-x-2" id="import-export-buttons">
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleImportData}
+              id="import-file"
+              style={{ display: 'none' }}
+            />
+            <label htmlFor="import-file" className="btn btn-secondary" id="import-button">
+              <Upload /> Import
+            </label>
+            <button className="btn btn-secondary" onClick={handleExportData} id="export-button">
+              <Download /> Export
+            </button>
+            <button className="btn btn-primary" onClick={handleAddCustomer} id="add-customer-button">
+              <UserPlus /> Thêm khách hàng
+            </button>
+          </div>
+        </div>
+        <div className="stats-grid" id="customer-stats-grid">
+          <div className="stats-card" id="total-customers-stat">
+            <div className="stats-content">
+              <div className="stats-icon blue" id="total-customers-icon">
+                <Users />
+              </div>
+              <div className="stats-info" id="total-customers-text">
+                <h3>{customers.length}</h3>
+                <p>Tổng khách hàng</p>
+              </div>
+            </div>
+          </div>
+          <div className="stats-card" id="active-customers-stat">
+            <div className="stats-content">
+              <div className="stats-icon green" id="active-customers-icon">
+                <CheckCircle />
+              </div>
+              <div className="stats-info" id="active-customers-text">
+                <h3>{customers.filter(c => c.status === 'active').length}</h3>
+                <p>Đang hoạt động</p>
+              </div>
+            </div>
+          </div>
+          <div className="stats-card" id="revenue-stat">
+            <div className="stats-content">
+              <div className="stats-icon yellow" id="revenue-icon">
+                <TrendingUp />
+              </div>
+              <div className="stats-info" id="revenue-text">
+                <h3>{formatCurrency(customers.reduce((sum, c) => sum + c.totalSpent, 0))}</h3>
+                <p>Doanh thu</p>
+              </div>
+            </div>
+          </div>
+          <div className="stats-card" id="orders-stat">
+            <div className="stats-content">
+              <div className="stats-icon purple" id="orders-icon">
+                <Star />
+              </div>
+              <div className="stats-info" id="orders-text">
+                <h3>{customers.reduce((sum, c) => sum + c.totalOrders, 0)}</h3>
+                <p>Đơn hàng</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="search-filter-section" id="search-filter-section">
+          <div className="search-filter-content" id="search-filter-container">
+            <div className="search-box" id="search-container">
+              <Search id="search-icon" />
               <input
-                type="file"
-                accept=".csv"
-                onChange={handleImportData}
-                className="hidden"
-                id="import-file"
+                type="text"
+                placeholder="Tìm kiếm theo tên, SĐT, email, mã KH..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="search-input"
+                id="customer-search-input"
               />
-              <label
-                htmlFor="import-file"
-                className="flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg cursor-pointer transition-colors"
-                id="import-button"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Nhập
-              </label>
-              
-              <button
-                onClick={handleExportData}
-                className="flex items-center px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
-                id="export-button"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Xuất
-              </button>
             </div>
-          </div>
-        </div>
-
-        {/* Thống kê nhanh */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6" id="customer-stats-grid">
-          <div className="bg-white p-4 rounded-lg shadow" id="total-customers-stat">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg" id="total-customers-icon">
-                <Users className="h-6 w-6 text-blue-600" />
-              </div>
-              <div className="ml-4" id="total-customers-text">
-                <p className="text-sm text-gray-600">Tổng khách hàng</p>
-                <p className="text-xl font-semibold">{customers.length}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white p-4 rounded-lg shadow" id="active-customers-stat">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg" id="active-customers-icon">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-              <div className="ml-4" id="active-customers-text">
-                <p className="text-sm text-gray-600">Đang hoạt động</p>
-                <p className="text-xl font-semibold">
-                  {customers.filter(c => c.status === 'active').length}
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white p-4 rounded-lg shadow" id="revenue-stat">
-            <div className="flex items-center">
-              <div className="p-2 bg-yellow-100 rounded-lg" id="revenue-icon">
-                <TrendingUp className="h-6 w-6 text-yellow-600" />
-              </div>
-              <div className="ml-4" id="revenue-text">
-                <p className="text-sm text-gray-600">Doanh thu</p>
-                <p className="text-xl font-semibold">
-                  {formatCurrency(customers.reduce((sum, c) => sum + c.totalSpent, 0))}
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white p-4 rounded-lg shadow" id="orders-stat">
-            <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg" id="orders-icon">
-                <Star className="h-6 w-6 text-purple-600" />
-              </div>
-              <div className="ml-4" id="orders-text">
-                <p className="text-sm text-gray-600">Đơn hàng</p>
-                <p className="text-xl font-semibold">
-                  {customers.reduce((sum, c) => sum + c.totalOrders, 0)}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Tìm kiếm và lọc */}
-        <div className="bg-white p-4 rounded-lg shadow mb-6" id="search-filter-section">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0" id="search-filter-container">
-            {/* Tìm kiếm */}
-            <div className="flex-1 max-w-md" id="search-container">
-              <div className="relative" id="search-input-wrapper">
-                <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" id="search-icon" />
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm khách hàng..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  id="customer-search-input"
-                />
-              </div>
-            </div>
-
-            {/* Bộ lọc */}
-            <div className="flex items-center space-x-4" id="filter-container">
+            <div className="filter-controls" id="filter-container">
               <select
                 value={selectedFilter}
                 onChange={(e) => setSelectedFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="select-control"
                 id="status-filter-select"
               >
                 <option value="all">Tất cả trạng thái</option>
                 <option value="active">Hoạt động</option>
                 <option value="inactive">Không hoạt động</option>
               </select>
-
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="select-control"
                 id="sort-by-select"
               >
-                <option value="name">Sắp xếp theo tên</option>
-                <option value="createdAt">Sắp xếp theo ngày tạo</option>
-                <option value="totalSpent">Sắp xếp theo chi tiêu</option>
-                <option value="totalOrders">Sắp xếp theo số đơn</option>
+                <option value="name">Tên A-Z</option>
+                <option value="createdAt">Ngày tạo</option>
+                <option value="totalSpent">Chi tiêu</option>
+                <option value="totalOrders">Số đơn</option>
               </select>
-
               <button
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="sort-button"
                 title={sortOrder === 'asc' ? 'Tăng dần' : 'Giảm dần'}
                 id="sort-order-button"
               >
@@ -454,143 +408,105 @@ const CustomerManagement = () => {
             </div>
           </div>
         </div>
-
-        {/* Hành động hàng loạt */}
         {selectedCustomers.length > 0 && (
-          <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-4" id="bulk-actions-section">
-            <div className="flex items-center justify-between" id="bulk-actions-container">
-              <span className="text-blue-800" id="selected-count-text">
-                Đã chọn {selectedCustomers.length} khách hàng
-              </span>
-              <div className="flex items-center space-x-2" id="bulk-action-buttons">
-                <button
-                  onClick={handleBulkDelete}
-                  className="flex items-center px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition-colors"
-                  id="bulk-delete-button"
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Xóa đã chọn
-                </button>
-                <button
-                  onClick={() => setSelectedCustomers([])}
-                  className="flex items-center px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded text-sm transition-colors"
-                  id="deselect-all-button"
-                >
-                  <X className="h-4 w-4 mr-1" />
-                  Bỏ chọn
-                </button>
-              </div>
+          <div className="bulk-actions" id="bulk-actions-section">
+            <span className="bulk-actions-text" id="selected-count-text">
+              Đã chọn {selectedCustomers.length} khách hàng
+            </span>
+            <div className="bulk-actions-buttons" id="bulk-action-buttons">
+              <button className="btn btn-danger btn-sm" onClick={handleBulkDelete} id="bulk-delete-button">
+                <Trash2 /> Xóa đã chọn
+              </button>
+              <button className="btn btn-gray btn-sm" onClick={() => setSelectedCustomers([])} id="deselect-all-button">
+                <X /> Bỏ chọn
+              </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Bảng dữ liệu */}
-      <div className="bg-white rounded-lg shadow overflow-hidden" id="customer-table-container">
-        <div className="overflow-x-auto" id="customer-table-wrapper">
-          <table className="w-full" id="customer-table">
-            <thead className="bg-gray-50 border-b border-gray-200" id="customer-table-header">
+      <div className="data-table-container" id="customer-table-container">
+        <div className="data-table-wrapper" id="customer-table-wrapper">
+          <table className="data-table" id="customer-table">
+            <thead className="table-header" id="customer-table-header">
               <tr id="customer-table-header-row">
-                <th className="px-6 py-3 text-left" id="select-all-header">
+                <th id="select-all-header">
                   <input
                     type="checkbox"
                     checked={selectedCustomers.length === currentCustomers.length && currentCustomers.length > 0}
                     onChange={handleSelectAll}
-                    className="rounded border-gray-300 focus:ring-blue-500"
                     id="select-all-checkbox"
                   />
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" id="customer-name-header">
-                  Khách hàng
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" id="contact-info-header">
-                  Liên hệ
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" id="company-header">
-                  Công ty
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" id="status-header">
-                  Trạng thái
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" id="orders-header">
-                  Đơn hàng
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" id="spending-header">
-                  Chi tiêu
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" id="actions-header">
-                  Hành động
-                </th>
+                <th id="customer-name-header">Khách hàng</th>
+                <th id="contact-info-header">Liên hệ</th>
+                <th id="stats-header">Thống kê</th>
+                <th id="status-header">Trạng thái</th>
+                <th id="actions-header">Thao tác</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200" id="customer-table-body">
+            <tbody className="table-body" id="customer-table-body">
               {currentCustomers.map((customer) => (
-                <tr key={customer.id} className="hover:bg-gray-50" id={`customer-row-${customer.id}`}>
-                  <td className="px-6 py-4 whitespace-nowrap" id={`select-cell-${customer.id}`}>
+                <tr key={customer.id} id={`customer-row-${customer.id}`}>
+                  <td id={`select-cell-${customer.id}`}>
                     <input
                       type="checkbox"
                       checked={selectedCustomers.includes(customer.id)}
                       onChange={() => handleSelectCustomer(customer.id)}
-                      className="rounded border-gray-300 focus:ring-blue-500"
                       id={`select-customer-${customer.id}`}
                     />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap" id={`customer-info-cell-${customer.id}`}>
-                    <div className="flex items-center" id={`customer-info-container-${customer.id}`}>
-                      <div className="h-10 w-10 flex-shrink-0" id={`customer-avatar-${customer.id}`}>
-                        <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center" id={`customer-avatar-circle-${customer.id}`}>
-                          <span className="text-blue-600 font-medium text-sm" id={`customer-avatar-initial-${customer.id}`}>
-                            {customer.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
+                  <td id={`customer-info-cell-${customer.id}`}>
+                    <div className="customer-info" id={`customer-info-container-${customer.id}`}>
+                      <div className="customer-avatar" id={`customer-avatar-${customer.id}`}>
+                        {customer.name.charAt(0).toUpperCase()}
                       </div>
-                      <div className="ml-4" id={`customer-text-info-${customer.id}`}>
-                        <div className="text-sm font-medium text-gray-900" id={`customer-name-${customer.id}`}>{customer.name}</div>
-                        <div className="text-sm text-gray-500" id={`customer-id-${customer.id}`}>ID: {customer.id}</div>
+                      <div className="customer-details" id={`customer-text-info-${customer.id}`}>
+                        <h4 id={`customer-name-${customer.id}`}>{customer.name}</h4>
+                        <p id={`customer-id-${customer.id}`}>Mã: KH{String(customer.id).slice(-3).padStart(3, '0')}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap" id={`contact-info-cell-${customer.id}`}>
-                    <div className="text-sm text-gray-900" id={`customer-email-${customer.id}`}>{customer.email}</div>
-                    <div className="text-sm text-gray-500" id={`customer-phone-${customer.id}`}>{customer.phone}</div>
+                  <td id={`contact-info-cell-${customer.id}`}>
+                    <div className="contact-info">
+                      <div className="primary" id={`customer-phone-${customer.id}`}>{customer.phone}</div>
+                      <div className="secondary" id={`customer-email-${customer.id}`}>{customer.email}</div>
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900" id={`company-cell-${customer.id}`}>
-                    {customer.company}
+                  <td id={`stats-cell-${customer.id}`}>
+                    <div className="contact-info">
+                      <div className="primary" id={`spending-cell-${customer.id}`}>{formatCurrency(customer.totalSpent)}</div>
+                      <div className="secondary" id={`orders-cell-${customer.id}`}>{customer.totalOrders} đơn hàng</div>
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap" id={`status-cell-${customer.id}`}>
+                  <td id={`status-cell-${customer.id}`}>
                     {getStatusBadge(customer.status)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900" id={`orders-cell-${customer.id}`}>
-                    {customer.totalOrders}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900" id={`spending-cell-${customer.id}`}>
-                    {formatCurrency(customer.totalSpent)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" id={`actions-cell-${customer.id}`}>
-                    <div className="flex items-center space-x-2" id={`action-buttons-${customer.id}`}>
+                  <td id={`actions-cell-${customer.id}`}>
+                    <div className="action-buttons-cell" id={`action-buttons-${customer.id}`}>
                       <button
                         onClick={() => handleViewCustomer(customer)}
-                        className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
+                        className="action-btn view"
                         title="Xem chi tiết"
                         id={`view-button-${customer.id}`}
                       >
-                        <Eye className="h-4 w-4" />
+                        <Eye />
                       </button>
                       <button
                         onClick={() => handleEditCustomer(customer)}
-                        className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50"
+                        className="action-btn edit"
                         title="Chỉnh sửa"
                         id={`edit-button-${customer.id}`}
                       >
-                        <Edit className="h-4 w-4" />
+                        <Edit />
                       </button>
                       <button
                         onClick={() => handleDeleteCustomer(customer.id)}
-                        className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
+                        className="action-btn delete"
                         title="Xóa"
                         id={`delete-button-${customer.id}`}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 />
                       </button>
                     </div>
                   </td>
@@ -599,57 +515,45 @@ const CustomerManagement = () => {
             </tbody>
           </table>
         </div>
-
-        {/* Pagination */}
         {totalPages > 1 && (
-          <div className="bg-white px-6 py-3 border-t border-gray-200" id="pagination-section">
-            <div className="flex items-center justify-between" id="pagination-container">
-              <div className="text-sm text-gray-700" id="pagination-info">
-                Hiển thị {indexOfFirstItem + 1} đến {Math.min(indexOfLastItem, filteredCustomers.length)} 
-                trong tổng số {filteredCustomers.length} khách hàng
+          <div className="pagination" id="pagination-section">
+            <div className="pagination-info" id="pagination-info">
+              Hiển thị {indexOfFirstItem + 1} đến {Math.min(indexOfLastItem, filteredCustomers.length)} trong tổng số {filteredCustomers.length} khách hàng
+            </div>
+            <div className="pagination-controls" id="pagination-controls">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="pagination-btn"
+                id="prev-page-button"
+              >
+                <ChevronLeft />
+              </button>
+              <div className="pagination-numbers" id="page-buttons">
+                {[...Array(totalPages)].map((_, index) => (
+                  <button
+                    key={index + 1}
+                    onClick={() => setCurrentPage(index + 1)}
+                    className={`pagination-number ${currentPage === index + 1 ? 'active' : ''}`}
+                    id={`page-button-${index + 1}`}
+                  >
+                    {index + 1}
+                  </button>
+                ))}
               </div>
-              <div className="flex items-center space-x-2" id="pagination-controls">
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className="p-2 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                  id="prev-page-button"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                
-                <div className="flex items-center space-x-1" id="page-buttons">
-                  {[...Array(totalPages)].map((_, index) => (
-                    <button
-                      key={index + 1}
-                      onClick={() => setCurrentPage(index + 1)}
-                      className={`px-3 py-1 rounded-lg ${
-                        currentPage === index + 1
-                          ? 'bg-blue-600 text-white'
-                          : 'border border-gray-300 hover:bg-gray-50'
-                      }`}
-                      id={`page-button-${index + 1}`}
-                    >
-                      {index + 1}
-                    </button>
-                  ))}
-                </div>
-                
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className="p-2 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                  id="next-page-button"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="pagination-btn"
+                id="next-page-button"
+              >
+                <ChevronRight />
+              </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Modals */}
       <CustomerForm
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}

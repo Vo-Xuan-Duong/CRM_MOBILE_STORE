@@ -4,14 +4,19 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "r
 // Components
 import Sidebar from "./components/Sidebar/Sidebar.jsx";
 import Header from "./components/Header/Header.jsx";
+import "./components/Header/Header.css";
+import "./components/Sidebar/Sidebar.css";
 
 // Pages
 import CustomerManagement from "./pages/CustomerManagement/CustomerManagement.jsx";
 import CustomerForm from "./pages/CustomerManagement/CustomerForm/CustomerForm.jsx";
 import CustomerDetailModal from "./pages/CustomerManagement/CustomerDetailModal/CustomerDetailModal.jsx";
-import AuthContainer from "./components/Login/AuthContainer.jsx"
-import QRScanPage from "./pages/QRScan/QRScanPage.jsx"
-import EcommerManagement from "./pages/EcommerceDashboard/EcommerceDashboard.jsx"
+import AuthContainer from "./components/Login/AuthContainer.jsx";
+import QRScanPage from "./pages/QRScan/QRScanPage.jsx";
+import EcommerManagement from "./pages/EcommerceDashboard/EcommerceDashboard.jsx";
+import WarrantyLookup from "./pages/Warranty/WarrantyLookup.jsx";
+import PaymentPage from "./pages/Payment/Payment.jsx";
+
 function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
@@ -20,47 +25,32 @@ function AppLayout() {
   const isAuthPage = location.pathname === "/login" || location.pathname === "/register";
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* Chỉ render Sidebar nếu không ở trang auth */}
-      {!isAuthPage && (
-        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      )}
+    <div>
+      {!isAuthPage && <Header onMenuClick={toggleSidebar} />}
+      {!isAuthPage && <Sidebar isOpen={isSidebarOpen} />}
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        {/* Chỉ render Header nếu không ở trang auth */}
-        {!isAuthPage && <Header onMenuClick={toggleSidebar} />}
+      <main className={!isAuthPage ? "main-content" : ""}>
+        <Routes>
+          {/* Redirect root */}
+          <Route path="/" element={<Navigate to="/customers" replace />} />
 
-        {/* Page Content */}
-        <main className={`${!isAuthPage ? "p-6" : ""} flex-1`}>
-          <Routes>
-            {/* Redirect root to customers */}
-            <Route path="/" element={<Navigate to="/customers" replace />} />
+          {/* Auth */}
+          <Route path="/login" element={<AuthContainer />} />
+          <Route path="/register" element={<AuthContainer />} />
 
-            {/* Customer management */}
-            <Route path="/customers" element={<CustomerManagement />} />
-            <Route path="/customer-form" element={<CustomerForm />} />
-            <Route path="/customer/:id" element={<CustomerDetailModal />} />
+          {/* Features */}
+          <Route path="/customers" element={<CustomerManagement />} />
+          <Route path="/customer-form" element={<CustomerForm />} />
+          <Route path="/customer/:id" element={<CustomerDetailModal />} />
+          <Route path="/qr-scan" element={<QRScanPage />} />
+          <Route path="/reports" element={<EcommerManagement />} />
+          <Route path="/warranty" element={<WarrantyLookup />} />
+          <Route path="/payment" element={<PaymentPage />} />
 
-            {/* Auth */}
-            <Route path="/login" element={<AuthContainer />} />
-            <Route path="/register" element={<AuthContainer />} />
-            <Route path="/qr-scan" element={<QRScanPage />} />
-            <Route path="/ecommerceDashboard" element={<EcommerManagement/>}/>
-            {/* Other features */}
-            <Route path="/scan" element={<h1>Quét mã QR</h1>} />
-            <Route path="/payment" element={<h1>Thanh toán</h1>} />
-            <Route path="/warranty" element={<h1>Tra cứu bảo hành</h1>} />
-            <Route path="/reports" element={<h1>Thống kê & báo cáo</h1>} />
-            <Route path="/products" element={<h1>Sản phẩm</h1>} />
-            <Route path="/staff" element={<h1>Quản lý nhân viên</h1>} />
-            <Route path="/settings" element={<h1>Cài đặt</h1>} />
-
-            {/* 404 */}
-            <Route path="*" element={<h1>404 - Không tìm thấy trang</h1>} />
-          </Routes>
-        </main>
-      </div>
+          {/* 404 */}
+          <Route path="*" element={<h1>404 - Không tìm thấy trang</h1>} />
+        </Routes>
+      </main>
     </div>
   );
 }
