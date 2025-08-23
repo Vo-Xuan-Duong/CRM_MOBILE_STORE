@@ -20,7 +20,7 @@ public class SKUMapper {
                 .variantName(sku.getVariantName())
                 .color(sku.getColor())
                 .storageGb(sku.getStorageGb())
-                .barcode(sku.getBarcode())
+                .code(sku.getCode())
                 .price(sku.getPrice())
                 .costPrice(sku.getCostPrice())
                 .isSerialized(sku.getIsSerialized())

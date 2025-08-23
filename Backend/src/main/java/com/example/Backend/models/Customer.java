@@ -14,6 +14,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.Getter;
 
 @Data
 @Entity
@@ -32,14 +33,19 @@ public class Customer {
     private String fullName;
 
     @NotBlank(message = "Phone is required")
-    @Pattern(regexp = "^\\+?[0-9\\s\\-\\(\\)]{8,20}$", message = "Phone format is invalid")
+    @Pattern(regexp = "^\\+?[0-9\\s\\-()]{8,20}$", message = "Phone format is invalid")
     @Column(nullable = false, unique = true)
     private String phone;
 
     @Email(message = "Email format is invalid")
     private String email;
 
-    private LocalDate dob;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Gender gender;
+
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
 
     private String address;
 
@@ -62,6 +68,7 @@ public class Customer {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Getter
     public enum CustomerTier {
         REGULAR("regular"),
         VIP("vip"),
@@ -72,9 +79,18 @@ public class Customer {
         CustomerTier(String value) {
             this.value = value;
         }
+    }
 
-        public String getValue() {
-            return value;
+    @Getter
+    public enum Gender {
+        NAM("Nam"),
+        NU("Nữ"),
+        KHAC("Khác");
+
+        private final String value;
+
+        Gender(String value) {
+            this.value = value;
         }
     }
 }

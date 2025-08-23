@@ -11,8 +11,9 @@ public class BrandResponseDTO {
 
     private Long id;
     private String name;
-    private String country;
+    private String logoUrl;
     private String website;
+    private Boolean isActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

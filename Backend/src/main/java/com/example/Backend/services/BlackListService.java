@@ -18,7 +18,7 @@ public class BlackListService {
     /**
      * Add token to blacklist
      */
-    public void blacklistToken(String tokenId, long expirationTimeInSeconds) {
+    public void addTokenToBlackList(String tokenId, long expirationTimeInSeconds) {
         try {
             String key = BLACKLIST_PREFIX + tokenId;
             redisService.set(key, "blacklisted", expirationTimeInSeconds, TimeUnit.SECONDS);

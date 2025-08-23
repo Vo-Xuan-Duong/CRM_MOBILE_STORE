@@ -2,6 +2,7 @@ package com.example.Backend.mappers;
 
 import com.example.Backend.dtos.user.UserRequest;
 import com.example.Backend.dtos.user.UserResponse;
+import com.example.Backend.models.Permission;
 import com.example.Backend.models.Role;
 import com.example.Backend.models.User;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,12 +26,12 @@ public class UserMapper {
         Set<String> permissions = user.getRoles() != null ? 
             user.getRoles().stream()
                 .flatMap(role -> role.getPermissions().stream())
-                .map(permission -> permission.getCode())
+                .map(Permission::getCode)
                 .collect(Collectors.toSet()) : Set.of();
         
         String roleNames = user.getRoles() != null ?
             user.getRoles().stream()
-                .map(Role::getRole)
+                .map(Role::getCode)
                 .collect(Collectors.joining(", ")) : "";
         
         return UserResponse.builder()
@@ -56,7 +57,7 @@ public class UserMapper {
                 .email(request.getEmail())
                 .phone(request.getPhone())
                 .username(request.getUsername())
-                .passwordHash(request.getPassword() != null ? 
+                .password(request.getPassword() != null ?
                     passwordEncoder.encode(request.getPassword()) : null)
                 .isActive(request.getIsActive() != null ? request.getIsActive() : true)
                 .build();
@@ -78,7 +79,7 @@ public class UserMapper {
             user.setUsername(request.getUsername());
         }
         if (request.getPassword() != null && !request.getPassword().isEmpty()) {
-            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
         }
         if (request.getIsActive() != null) {
             user.setIsActive(request.getIsActive());

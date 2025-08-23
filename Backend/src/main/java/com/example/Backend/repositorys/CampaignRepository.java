@@ -16,12 +16,7 @@ public interface CampaignRepository extends JpaRepository<Campaign, Long> {
 
     List<Campaign> findByType(Campaign.CampaignType type);
 
-    List<Campaign> findByStatusAndIsActive(Campaign.CampaignStatus status, Boolean isActive);
-
     List<Campaign> findByCreatedById(Long createdById);
-
-    @Query("SELECT c FROM Campaign c WHERE c.startDate <= :date AND c.endDate >= :date AND c.isActive = true")
-    List<Campaign> findActiveCampaignsOnDate(@Param("date") LocalDate date);
 
     @Query("SELECT c FROM Campaign c WHERE c.startDate BETWEEN :startDate AND :endDate")
     List<Campaign> findCampaignsByDateRange(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);

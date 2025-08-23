@@ -37,21 +37,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull FilterChain filterChain) throws ServletException, IOException {
         log.info("---------------------------JWT_AUTHENTICATION_FILTER---------------------------------------");
 
-        // Skip JWT validation for OpenAPI and Swagger endpoints
-        String requestPath = request.getRequestURI();
-        if (requestPath.startsWith("/swagger-ui") ||
-            requestPath.startsWith("/v3/api-docs") ||
-            requestPath.startsWith("/api-docs") ||
-            requestPath.startsWith("/swagger-resources") ||
-            requestPath.startsWith("/webjars") ||
-            requestPath.equals("/swagger-ui.html") ||
-            requestPath.startsWith("/api/auth/") ||
-            requestPath.startsWith("/api/public/") ||
-            requestPath.equals("/actuator/health")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
@@ -79,8 +64,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
 
             if(SecurityContextHolder.getContext().getAuthentication()==null){
+
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                 log.info("Authorities: {}", userDetails.getAuthorities());
+
                 if(jwtService.validateToken(jwtToken, userDetails, TokenType.ACCESS_TOKEN)) {
                     
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(

@@ -40,8 +40,8 @@ public class SKUService {
         }
 
         // Check barcode uniqueness
-        if (request.getBarcode() != null && skuRepository.existsByBarcode(request.getBarcode())) {
-            throw new ProductException("Barcode already exists: " + request.getBarcode());
+        if (request.getCode() != null && skuRepository.existsByCode(request.getCode())) {
+            throw new ProductException("Barcode already exists: " + request.getCode());
         }
 
         SKU sku = SKU.builder()
@@ -49,7 +49,7 @@ public class SKUService {
                 .variantName(request.getVariantName())
                 .color(request.getColor())
                 .storageGb(request.getStorageGb())
-                .barcode(request.getBarcode())
+                .code(request.getCode())
                 .price(request.getPrice())
                 .costPrice(request.getCostPrice())
                 .isSerialized(request.getIsSerialized())
@@ -68,7 +68,7 @@ public class SKUService {
         sku.setVariantName(request.getVariantName());
         sku.setColor(request.getColor());
         sku.setStorageGb(request.getStorageGb());
-        sku.setBarcode(request.getBarcode());
+        sku.setCode(request.getCode());
         sku.setPrice(request.getPrice());
         sku.setCostPrice(request.getCostPrice());
         sku.setIsSerialized(request.getIsSerialized());
@@ -84,7 +84,7 @@ public class SKUService {
     }
 
     public SKUResponse getSKUByBarcode(String barcode) {
-        SKU sku = skuRepository.findByBarcode(barcode)
+        SKU sku = skuRepository.findByCode(barcode)
                 .orElseThrow(() -> new ProductException("SKU not found with barcode: " + barcode));
         return skuMapper.toResponse(sku);
     }

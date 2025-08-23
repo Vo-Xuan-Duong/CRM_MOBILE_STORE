@@ -1,5 +1,6 @@
 package com.example.Backend.dtos.product;
 
+import com.example.Backend.models.ProductModel;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -20,12 +21,11 @@ public class ProductModelRequest {
     @NotBlank(message = "Product model name is required")
     private String name;
 
-    private String category = "phone"; // phone, accessory, service
+    private ProductModel.ProductCategory category = ProductModel.ProductCategory.PHONE; // phone, accessory, service
 
     @Min(value = 0, message = "Warranty months must be non-negative")
     private Integer defaultWarrantyMonths = 12;
 
     private String description;
 
-    private Boolean isActive = true;
 }

@@ -18,4 +18,7 @@ public class SpecGroupResponse {
     private Integer sortOrder;
     private Boolean isActive;
     private LocalDateTime createdAt;
+
+    // Thống kê
+    private Long fieldCount;
 }

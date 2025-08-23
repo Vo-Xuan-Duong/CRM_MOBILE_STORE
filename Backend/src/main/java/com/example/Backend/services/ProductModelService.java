@@ -37,10 +37,10 @@ public class ProductModelService {
         ProductModel productModel = ProductModel.builder()
                 .brand(brand)
                 .name(request.getName())
-                .category(ProductModel.ProductCategory.valueOf(request.getCategory().toUpperCase()))
+                .category(request.getCategory())
                 .defaultWarrantyMonths(request.getDefaultWarrantyMonths())
                 .description(request.getDescription())
-                .isActive(request.getIsActive())
+                .isActive(true)
                 .build();
 
         ProductModel savedModel = productModelRepository.save(productModel);
@@ -53,10 +53,9 @@ public class ProductModelService {
 
         productModel.setBrand(brand);
         productModel.setName(request.getName());
-        productModel.setCategory(ProductModel.ProductCategory.valueOf(request.getCategory().toUpperCase()));
+        productModel.setCategory(request.getCategory());
         productModel.setDefaultWarrantyMonths(request.getDefaultWarrantyMonths());
         productModel.setDescription(request.getDescription());
-        productModel.setIsActive(request.getIsActive());
 
         ProductModel savedModel = productModelRepository.save(productModel);
         return productModelMapper.toResponse(savedModel);
@@ -78,7 +77,7 @@ public class ProductModelService {
     }
 
     public List<ProductModelResponse> getProductModelsByBrand(Long brandId) {
-        return productModelRepository.findByBrandIdAndIsActiveTrue(brandId).stream()
+        return productModelRepository.findByBrand_IdAndIsActiveTrue(brandId).stream()
                 .map(productModelMapper::toResponse)
                 .collect(Collectors.toList());
     }
@@ -111,5 +110,18 @@ public class ProductModelService {
     private Brand findBrandById(Long id) {
         return brandRepository.findById(id)
                 .orElseThrow(() -> new ProductException("Brand not found with id: " + id));
+    }
+
+    public void deleteProductModel(Long id) {
+        ProductModel productModel = findProductModelById(id);
+        productModelRepository.delete(productModel);
+    }
+
+    public List<ProductModel> getInactiveProductModels() {
+        return productModelRepository.findByIsActiveFalse();
+    }
+
+    public List<ProductModel> getActiveProductModels() {
+        return productModelRepository.findByIsActiveTrue();
     }
 }

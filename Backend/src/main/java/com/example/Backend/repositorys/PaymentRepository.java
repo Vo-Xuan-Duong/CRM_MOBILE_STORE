@@ -16,18 +16,9 @@ import java.util.Optional;
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
-    
-
     List<Payment> findByOrderId(Long orderId);
 
-    List<Payment> findByCustomerId(Long customerId);
-
-    List<Payment> findByStatus(String status);
-    
-    List<Payment> findByMethod(String method);
-
-    @Query("SELECT p FROM Payment p WHERE p.customer.id = :customerId")
-    Page<Payment> findByCustomerId(@Param("customerId") Long customerId, Pageable pageable);
+    Page<Payment> findByOrder_Customer_Id(@Param("customerId") Long customerId, Pageable pageable);
 
     @Query("SELECT p FROM Payment p WHERE p.order.id = :orderId")
     Page<Payment> findByOrderId(@Param("orderId") Long orderId, Pageable pageable);
@@ -51,21 +42,11 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
                                                   @Param("startDate") LocalDateTime startDate,
                                                   @Param("endDate") LocalDateTime endDate);
 
-    @Query("SELECT p FROM Payment p WHERE " +
-           "(:keyword IS NULL OR :keyword = '' OR " +
-           "p.paymentNumber LIKE CONCAT('%', :keyword, '%') OR " +
-           "p.transactionId LIKE CONCAT('%', :keyword, '%') OR " +
-           "p.referenceNumber LIKE CONCAT('%', :keyword, '%') OR " +
-           "LOWER(p.customer.firstName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-           "LOWER(p.customer.lastName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-           "p.customer.phoneNumber LIKE CONCAT('%', :keyword, '%'))")
-    Page<Payment> searchPayments(@Param("keyword") String keyword, Pageable pageable);
-
     @Query("SELECT COUNT(p) FROM Payment p WHERE p.status = :status")
     Long countByStatus(@Param("status") String status);
 
-    @Query("SELECT p FROM Payment p LEFT JOIN FETCH p.order LEFT JOIN FETCH p.customer WHERE p.id = :id")
-    Optional<Payment> findByIdWithDetails(@Param("id") Long id);
+//    @Query("SELECT p FROM Payment p LEFT JOIN FETCH p.order LEFT JOIN FETCH p.customer WHERE p.id = :id")
+//    Optional<Payment> findByIdWithDetails(@Param("id") Long id);
 
     
 }

@@ -21,7 +21,7 @@ public interface SKURepository extends JpaRepository<SKU, Long> {
 
     List<SKU> findByModelId(Long modelId);
 
-    Optional<SKU> findByBarcode(String barcode);
+    Optional<SKU> findByCode(String barcode);
 
     List<SKU> findByIsActiveTrue();
 
@@ -43,7 +43,7 @@ public interface SKURepository extends JpaRepository<SKU, Long> {
            "LOWER(s.model.brand.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(s.variantName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(s.color) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "s.barcode LIKE CONCAT('%', :search, '%'))")
+           "s.code LIKE CONCAT('%', :search, '%'))")
     Page<SKU> findActiveSkusWithSearch(@Param("search") String search, Pageable pageable);
 
     @Query("SELECT s FROM SKU s WHERE s.price BETWEEN :minPrice AND :maxPrice AND s.isActive = true")
@@ -58,7 +58,7 @@ public interface SKURepository extends JpaRepository<SKU, Long> {
     @Query("SELECT s.storageGb, COUNT(s) FROM SKU s WHERE s.isActive = true AND s.storageGb IS NOT NULL GROUP BY s.storageGb ORDER BY s.storageGb")
     List<Object[]> getSkuCountByStorage();
 
-    boolean existsByBarcode(String barcode);
+    boolean existsByCode(String barcode);
 
     @Query("SELECT COUNT(s) FROM SKU s WHERE s.model.id = :modelId AND s.isActive = true")
     long countByModelIdAndIsActiveTrue(@Param("modelId") Long modelId);

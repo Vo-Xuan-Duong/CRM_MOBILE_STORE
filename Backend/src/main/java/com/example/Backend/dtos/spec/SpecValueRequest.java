@@ -6,7 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
+import java.util.Map;
 
 @Data
 @Builder
@@ -14,20 +14,16 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class SpecValueRequest {
 
-    @NotNull(message = "Field ID is required")
+    @NotNull(message = "Field ID không được để trống")
     private Long fieldId;
 
-    private Long modelId;
-
+    // Chỉ một trong hai ID này được set
+    private Long productModelId;
     private Long skuId;
 
-    private String valueText;
+    @NotNull(message = "Giá trị không được để trống")
+    private Object value;
 
-    private BigDecimal valueNumber;
-
-    private Boolean valueBool;
-
-    private String valueJson;
-
-    private String unitOverride;
+    // Hoặc dùng map để batch update nhiều values
+    private Map<Long, Object> fieldValues;
 }

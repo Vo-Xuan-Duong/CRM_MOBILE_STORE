@@ -34,32 +34,6 @@ public class JwtService {
 
     private final RefreshTokenRepository refreshTokenRepository;
 
-    // Tạo token với User object
-    public String generateToken(User user) {
-        String tokenId = UUID.randomUUID().toString();
-        return generateToken(user, tokenId, TokenType.ACCESS_TOKEN);
-    }
-
-    // Tạo password reset token
-    public String generatePasswordResetToken(User user) {
-        String tokenId = UUID.randomUUID().toString();
-        return Jwts.builder()
-                .id(tokenId)
-                .claim("type", "PASSWORD_RESET")
-                .claim("userId", user.getId())
-                .subject(user.getUsername())
-                .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + (1000 * 60 * 60))) // 1 hour
-                .signWith(getSecretKey(TokenType.ACCESS_TOKEN))
-                .issuer(ISSUER)
-                .compact();
-    }
-
-    // Lấy thời gian hết hạn của access token
-    public Long getJwtExpiration() {
-        return EXPIRATION_ACCESS;
-    }
-
     public String generateToken(UserDetails userDetails, String tokenId, TokenType tokenType) {
         String token = Jwts.builder()
                 .id(tokenId)
@@ -72,7 +46,11 @@ public class JwtService {
                 .compact();
 
         if(tokenType == TokenType.REFRESH_TOKEN) {
-            refreshTokenRepository.save(new RefreshToken(tokenId, token, LocalDateTime.now()));
+            RefreshToken refreshToken = RefreshToken.builder()
+                    .id(tokenId)
+                    .refreshToken(token)
+                    .build();
+            refreshTokenRepository.save(refreshToken);
         }
 
         return token;
@@ -110,6 +88,15 @@ public class JwtService {
         Claims claims = extractClaims(token, tokenType);
         String username = claims.getSubject();
         return (username.equals(userDetails.getUsername()) && !isExpired(token, tokenType));
+    }
+
+    public boolean verifyToken(String token, TokenType tokenType) {
+        try {
+            extractClaims(token, tokenType);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public String extractName(String token, TokenType tokenType) {

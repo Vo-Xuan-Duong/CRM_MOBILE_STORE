@@ -21,7 +21,7 @@ public class SKUResponse {
     private String variantName;
     private String color;
     private Integer storageGb;
-    private String barcode;
+    private String code;
     private BigDecimal price;
     private BigDecimal costPrice;
     private Boolean isSerialized;

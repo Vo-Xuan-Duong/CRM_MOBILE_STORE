@@ -1,5 +1,6 @@
 package com.example.Backend.repositorys;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,4 +52,8 @@ public interface ProductModelRepository extends JpaRepository<ProductModel, Long
 
     @Query("SELECT COUNT(pm) FROM ProductModel pm WHERE pm.brand.id = :brandId AND pm.isActive = true")
     long countByBrandIdAndIsActiveTrue(@Param("brandId") Long brandId);
+
+    List<ProductModel> findByBrand_IdAndIsActiveTrue(Long brandId);
+
+    List<ProductModel> findByIsActiveFalse();
 }

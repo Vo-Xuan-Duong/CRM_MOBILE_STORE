@@ -1,5 +1,6 @@
 package com.example.Backend.dtos.payment;
 
+import com.example.Backend.models.Payment;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
@@ -20,10 +21,8 @@ public class PaymentCreateDTO {
     @NotNull(message = "Order ID is required")
     private Long orderId;
 
-    private Long customerId;
-
     @NotNull(message = "Payment method is required")
-    private String method; // cash, card, bank, momo, vnpay, other
+    private Payment.PaymentMethod method; // cash, card, bank, momo, vnpay, other
 
     @Builder.Default
     private String status = "completed"; // pending, completed, failed, refunded, cancelled
@@ -34,12 +33,4 @@ public class PaymentCreateDTO {
 
     @Builder.Default
     private LocalDateTime paidAt = LocalDateTime.now();
-
-    // Gateway fields for online payments
-    private String gatewayRequestId;
-    private String gatewayTransId;
-    private String gatewayPartner; // momo, vnpay, etc.
-    private String gatewayResultCode;
-    private String gatewayMessage;
-    private Map<String, Object> gatewayPayload;
 }

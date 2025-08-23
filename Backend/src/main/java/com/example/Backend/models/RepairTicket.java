@@ -70,6 +70,10 @@ public class RepairTicket {
     @Builder.Default
     private Boolean underWarranty = false;
 
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private RepairPriority priority = RepairPriority.NORMAL;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "technician_id")
     private User technician;
@@ -98,6 +102,23 @@ public class RepairTicket {
         private final String value;
 
         RepairStatus(String value) {
+            this.value = value;
+        }
+
+        public String getValue() {
+            return value;
+        }
+    }
+
+    public enum RepairPriority {
+        LOW("low"),
+        NORMAL("normal"),
+        HIGH("high"),
+        URGENT("urgent");
+
+        private final String value;
+
+        RepairPriority(String value) {
             this.value = value;
         }
 

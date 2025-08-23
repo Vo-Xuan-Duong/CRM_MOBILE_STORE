@@ -6,6 +6,8 @@ import com.example.Backend.exceptions.WarrantyException;
 import com.example.Backend.mappers.WarrantyMapper;
 import com.example.Backend.models.*;
 import com.example.Backend.repositorys.*;
+import lombok.Builder;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -131,8 +133,8 @@ public class WarrantyService {
                 .collect(Collectors.toList());
     }
 
-    public WarrantyController.WarrantyStatistics getWarrantyStatistics() {
-        return WarrantyController.WarrantyStatistics.builder()
+    public WarrantyStatistics getWarrantyStatistics() {
+        return WarrantyStatistics.builder()
                 .totalWarranties(warrantyRepository.count())
                 .activeWarranties(warrantyRepository.countByStatus(Warranty.WarrantyStatus.ACTIVE))
                 .expiredWarranties(warrantyRepository.countExpiredWarranties(LocalDate.now()))
@@ -140,6 +142,18 @@ public class WarrantyService {
                 .claimedWarranties(warrantyRepository.countByStatus(Warranty.WarrantyStatus.CLAIMED))
                 .expiringWithin30Days(warrantyRepository.countExpiringWithinDays(LocalDate.now().plusDays(30)))
                 .build();
+    }
+
+    // Inner class for warranty statistics
+    @Data
+    @Builder
+    public static class WarrantyStatistics {
+        private Long totalWarranties;
+        private Long activeWarranties;
+        private Long expiredWarranties;
+        private Long voidWarranties;
+        private Long claimedWarranties;
+        private Long expiringWithin30Days;
     }
 
     private String generateWarrantyCode() {

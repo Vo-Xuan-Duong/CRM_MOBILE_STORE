@@ -20,102 +20,60 @@ import java.util.UUID;
 @Transactional
 public class RefreshTokenService {
 
-    @Value("${jwt.expiration.refresh}")
-    private Long refreshTokenDurationMs;
-
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepository userRepository;
 
-    public RefreshToken createRefreshToken(Long userId) {
+    public void deleteByUserName(String username) {
         try {
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+            User user = userRepository.findByUsername(username).orElseThrow(
+                    () -> new RuntimeException("User not found with username: " + username)
+            );
 
-            // Xóa refresh token cũ của user này
-            deleteByUserId(userId);
-
-            // Tạo refresh token mới
-            RefreshToken refreshToken = RefreshToken.builder()
-                    .id(UUID.randomUUID().toString())
-                    .token(UUID.randomUUID().toString())
-                    .user(user)
-                    .expiryDate(LocalDateTime.now().plusSeconds(refreshTokenDurationMs / 1000))
-                    .createdDate(LocalDateTime.now())
-                    .build();
-
-            return refreshTokenRepository.save(refreshToken);
+            refreshTokenRepository.deleteByUserId(user.getId());
 
         } catch (Exception e) {
-            log.error("Error creating refresh token for user ID: {}", userId, e);
-            throw new RuntimeException("Tạo refresh token thất bại: " + e.getMessage());
+            log.error("Error deleting refresh tokens for username: {}", username, e);
         }
     }
 
-    public Optional<RefreshToken> findByToken(String token) {
-        return refreshTokenRepository.findByToken(token);
-    }
-
-    public RefreshToken verifyExpiration(RefreshToken token) {
-        if (token.getExpiryDate().isBefore(LocalDateTime.now())) {
-            refreshTokenRepository.delete(token);
-            throw new RuntimeException("Refresh token đã hết hạn. Vui lòng đăng nhập lại");
-        }
-        return token;
-    }
-
-    public void deleteByUserId(Long userId) {
+    public String getIdTokenByRefreshToken(String refreshToken) {
         try {
-            User user = userRepository.findById(userId).orElse(null);
-            if (user != null) {
-                refreshTokenRepository.deleteByUser(user);
+            Optional<RefreshToken> tokenOptional = refreshTokenRepository.findByRefreshToken(refreshToken);
+            if (tokenOptional.isPresent()) {
+                return tokenOptional.get().getId();
+            } else {
+                log.warn("Refresh token not found: {}", refreshToken);
+                return null;
             }
         } catch (Exception e) {
-            log.error("Error deleting refresh tokens for user ID: {}", userId, e);
+            log.error("Error retrieving ID token for refresh token: {}", refreshToken, e);
+            return null;
         }
     }
 
-    public RefreshToken createRefreshToken(String tokenId, String token) {
-        RefreshToken refreshToken = RefreshToken.builder()
-                .id(tokenId)
-                .token(token)
-                .createdDate(LocalDateTime.now())
-                .expiryDate(LocalDateTime.now().plusSeconds(refreshTokenDurationMs / 1000))
-                .build();
-        return refreshTokenRepository.save(refreshToken);
-    }
-
-    public RefreshToken getRefreshToken(String tokenId) {
-        return refreshTokenRepository.findById(tokenId)
-                .orElseThrow(() -> new RuntimeException("Refresh token không tồn tại"));
-    }
 
     public void deleteRefreshToken(String tokenId) {
         try {
-            refreshTokenRepository.deleteById(tokenId);
+            Optional<RefreshToken> tokenOptional = refreshTokenRepository.findById(tokenId);
+            if (tokenOptional.isPresent()) {
+                refreshTokenRepository.deleteById(tokenId);
+                log.info("Deleted refresh token with ID: {}", tokenId);
+            } else {
+                log.warn("Refresh token with ID: {} not found", tokenId);
+            }
         } catch (Exception e) {
             log.error("Error deleting refresh token with ID: {}", tokenId, e);
         }
     }
 
-    public void deleteAllRefreshTokensByUserId(String userId) {
+    public void deleteAllRefreshTokensByUserId(Long userId) {
         try {
             refreshTokenRepository.findAll().stream()
-                    .filter(token -> token.getUser() != null &&
-                            token.getUser().getId().toString().equals(userId))
+                    .filter(token -> false)
                     .forEach(token -> refreshTokenRepository.deleteById(token.getId()));
         } catch (Exception e) {
             log.error("Error deleting all refresh tokens for user ID: {}", userId, e);
         }
     }
 
-    // Cleanup expired tokens
-    @Transactional
-    public void deleteExpiredTokens() {
-        try {
-            refreshTokenRepository.deleteByExpiryDateBefore(LocalDateTime.now());
-            log.info("Cleaned up expired refresh tokens");
-        } catch (Exception e) {
-            log.error("Error cleaning up expired refresh tokens", e);
-        }
-    }
 }

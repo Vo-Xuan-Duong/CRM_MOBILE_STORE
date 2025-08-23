@@ -7,10 +7,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Data
 @Entity
@@ -28,10 +25,6 @@ public class Payment {
     @JoinColumn(name = "order_id", nullable = false)
     private SalesOrder order;
 
-    @NotBlank(message = "Payment number is required")
-    @Column(name = "payment_number", nullable = false, unique = true)
-    private String paymentNumber;
-
     @NotNull
     @DecimalMin(value = "0.01", message = "Amount must be positive")
     @Column(nullable = false, precision = 12, scale = 2)
@@ -40,9 +33,6 @@ public class Payment {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PaymentMethod method;
-
-    @Column(name = "reference_no")
-    private String referenceNo;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -56,15 +46,11 @@ public class Payment {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by")
-    private User createdBy;
-
+    @Getter
     public enum PaymentMethod {
         CASH("cash"),
         CARD("card"),
         TRANSFER("transfer"),
-        INSTALLMENT("installment"),
         OTHER("other");
 
         private final String value;
@@ -73,11 +59,9 @@ public class Payment {
             this.value = value;
         }
 
-        public String getValue() {
-            return value;
-        }
     }
 
+    @Getter
     public enum PaymentStatus {
         PENDING("pending"),
         COMPLETED("completed"),
@@ -90,9 +74,6 @@ public class Payment {
             this.value = value;
         }
 
-        public String getValue() {
-            return value;
-        }
     }
 
     // Business logic methods

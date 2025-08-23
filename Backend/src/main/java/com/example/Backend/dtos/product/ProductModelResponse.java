@@ -1,5 +1,6 @@
 package com.example.Backend.dtos.product;
 
+import com.example.Backend.models.ProductModel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,7 +18,7 @@ public class ProductModelResponse {
     private Long brandId;
     private String brandName;
     private String name;
-    private String category;
+    private ProductModel.ProductCategory category;
     private Integer defaultWarrantyMonths;
     private String description;
     private Boolean isActive;

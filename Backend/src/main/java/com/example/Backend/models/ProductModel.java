@@ -2,16 +2,13 @@ package com.example.Backend.models;
 
 import java.time.LocalDateTime;
 
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
 @Entity
@@ -60,6 +57,7 @@ public class ProductModel {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Getter
     public enum ProductCategory {
         PHONE("phone"),
         ACCESSORY("accessory"),
@@ -71,8 +69,5 @@ public class ProductModel {
             this.value = value;
         }
 
-        public String getValue() {
-            return value;
-        }
     }
 }

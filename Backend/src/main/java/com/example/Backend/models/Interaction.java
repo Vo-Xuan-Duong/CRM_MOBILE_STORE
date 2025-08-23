@@ -3,14 +3,11 @@ package com.example.Backend.models;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
 @Entity
@@ -51,10 +48,18 @@ public class Interaction {
     @Column(name = "follow_up_date")
     private LocalDate followUpDate;
 
+    @Enumerated(EnumType.STRING)
+    private InteractionPriority priority;
+
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private InteractionStatus status = InteractionStatus.OPEN;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Getter
     public enum InteractionType {
         CALL("call"),
         SMS("sms"),
@@ -71,11 +76,9 @@ public class Interaction {
             this.value = value;
         }
 
-        public String getValue() {
-            return value;
-        }
     }
 
+    @Getter
     public enum InteractionDirection {
         INBOUND("inbound"),
         OUTBOUND("outbound");
@@ -86,9 +89,36 @@ public class Interaction {
             this.value = value;
         }
 
-        public String getValue() {
-            return value;
+    }
+
+    @Getter
+    public enum InteractionPriority {
+        LOW("low"),
+        MEDIUM("medium"),
+        HIGH("high"),
+        URGENT("urgent");
+
+        private final String value;
+
+        InteractionPriority(String value) {
+            this.value = value;
         }
+
+    }
+
+    @Getter
+    public enum InteractionStatus {
+        OPEN("open"),
+        IN_PROGRESS("in_progress"),
+        RESOLVED("resolved"),
+        CLOSED("closed");
+
+        private final String value;
+
+        InteractionStatus(String value) {
+            this.value = value;
+        }
+
     }
 
     // Business logic methods

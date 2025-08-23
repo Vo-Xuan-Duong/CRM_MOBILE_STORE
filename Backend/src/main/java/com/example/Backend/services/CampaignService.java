@@ -1,6 +1,5 @@
 package com.example.Backend.services;
 
-import com.example.Backend.controllers.CampaignController;
 import com.example.Backend.dtos.campaign.CampaignRequest;
 import com.example.Backend.dtos.campaign.CampaignResponse;
 import com.example.Backend.exceptions.ResourceNotFoundException;
@@ -106,8 +105,8 @@ public class CampaignService {
 
     @Transactional(readOnly = true)
     public List<CampaignResponse> getActiveCampaigns() {
-        List<Campaign> campaigns = campaignRepository.findByStatusAndIsActive(
-                Campaign.CampaignStatus.ACTIVE, true);
+        List<Campaign> campaigns = campaignRepository.findByStatus(
+                Campaign.CampaignStatus.ACTIVE);
         return campaigns.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
@@ -209,7 +208,7 @@ public class CampaignService {
 
     @Transactional(readOnly = true)
     public List<Object> getCampaignTargets(Long campaignId) {
-        Campaign campaign = campaignRepository.findById(campaignId)
+        campaignRepository.findById(campaignId)
                 .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with id: " + campaignId));
 
         List<CampaignTarget> targets = campaignTargetRepository.findByCampaignId(campaignId);
@@ -247,7 +246,7 @@ public class CampaignService {
                 .build();
     }
 
-    public CampaignController.CampaignStatistics getCampaignStatistics() {
+    public CampaignStatistics getCampaignStatistics() {
         log.info("Fetching campaign statistics");
 
         long totalCampaigns = campaignRepository.count();
@@ -255,7 +254,7 @@ public class CampaignService {
         long completedCampaigns = campaignRepository.countByStatus(Campaign.CampaignStatus.COMPLETED);
         long cancelledCampaigns = campaignRepository.countByStatus(Campaign.CampaignStatus.CANCELLED);
 
-        return CampaignController.CampaignStatistics.builder()
+        return CampaignStatistics.builder()
                 .totalCampaigns(totalCampaigns)
                 .activeCampaigns(activeCampaigns)
                 .completedCampaigns(completedCampaigns)
@@ -270,27 +269,38 @@ public class CampaignService {
             return getAllCampaigns(pageable);
         }
 
-        Page<Campaign> campaigns = campaignRepository.searchCampaigns(keyword, pageable);
+        // Get all matching campaigns first, then apply pagination manually
+        List<Campaign> allCampaigns = campaignRepository.searchCampaigns(keyword);
+
+        // Convert to page
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), allCampaigns.size());
+        List<Campaign> pagedCampaigns = allCampaigns.subList(start, end);
+
+        Page<Campaign> campaigns = new org.springframework.data.domain.PageImpl<>(
+            pagedCampaigns,
+            pageable,
+            allCampaigns.size()
+        );
 
         return campaigns.map(this::mapToResponse);
     }
 
-    public CampaignController.CampaignPerformance getCampaignPerformance(Long id) {
+    public CampaignPerformance getCampaignPerformance(Long id) {
         log.info("Fetching performance for campaign with id: {}", id);
 
-        Campaign campaign = campaignRepository.findById(id)
+        campaignRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with id: " + id));
 
-//        long totalTargets = campaignTargetRepository.countByCampaignId(id);
-//        long activeTargets = campaignTargetRepository.countByCampaignIdAndStatus(id, CampaignTarget.CampaignTargetStatus.ACTIVE);
-//        long completedTargets = campaignTargetRepository.countByCampaignIdAndStatus(id, CampaignTarget.CampaignTargetStatus.COMPLETED);
-//        long cancelledTargets = campaignTargetRepository.countByCampaignIdAndStatus(id, CampaignTarget.CampaignTargetStatus.CANCELLED);
-
-        return CampaignController.CampaignPerformance.builder()
-//                .totalTargets(totalTargets)
-//                .activeTargets(activeTargets)
-//                .completedTargets(completedTargets)
-//                .cancelledTargets(cancelledTargets)
+        // TODO: Implement actual performance metrics calculation
+        // For now, return default values
+        return CampaignPerformance.builder()
+                .totalTargets(0L)
+                .activeTargets(0L)
+                .completedTargets(0L)
+                .cancelledTargets(0L)
+                .conversionRate(0.0)
+                .totalRevenue(0.0)
                 .build();
     }
 
@@ -303,5 +313,25 @@ public class CampaignService {
         private String customerEmail;
         private Object customerTier;
         private LocalDateTime addedAt;
+    }
+
+    @lombok.Data
+    @lombok.Builder
+    public static class CampaignStatistics {
+        private long totalCampaigns;
+        private long activeCampaigns;
+        private long completedCampaigns;
+        private long cancelledCampaigns;
+    }
+
+    @lombok.Data
+    @lombok.Builder
+    public static class CampaignPerformance {
+        private long totalTargets;
+        private long activeTargets;
+        private long completedTargets;
+        private long cancelledTargets;
+        private double conversionRate;
+        private double totalRevenue;
     }
 }

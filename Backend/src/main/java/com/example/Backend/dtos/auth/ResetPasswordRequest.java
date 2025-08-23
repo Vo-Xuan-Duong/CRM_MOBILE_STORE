@@ -14,9 +14,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ResetPasswordRequest {
 
-    @NotBlank(message = "Token reset không được để trống")
-    private String token;
-
     @NotBlank(message = "Mật khẩu mới không được để trống")
     @Size(min = 6, max = 100, message = "Mật khẩu mới phải từ 6-100 ký tự")
     @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).*$",

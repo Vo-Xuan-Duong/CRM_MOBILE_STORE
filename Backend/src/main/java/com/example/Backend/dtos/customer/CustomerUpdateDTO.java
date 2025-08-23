@@ -26,13 +26,8 @@ public class CustomerUpdateDTO {
 
     private LocalDate birthDate;
     private Customer.Gender gender;
-
     // Address fields
-    private String addressLine;
-    private String ward;
-    private String district;
-    private String city;
-    private String province;
+    private String address;
 
     private String note;
 }

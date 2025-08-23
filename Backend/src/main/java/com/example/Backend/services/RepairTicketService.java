@@ -53,13 +53,12 @@ public class RepairTicketService {
                 .ticketNumber(ticketNumber)
                 .customer(customer)
                 .serialUnit(serialUnit)
-                .deviceInfo(request.getDeviceInfo())
-                .issueDescription(request.getIssueDescription())
-                .status(RepairTicket.RepairStatus.PENDING)
+                .issueDesc(request.getIssueDescription()) // Use issueDesc instead of deviceInfo
+                .status(RepairTicket.RepairStatus.RECEIVED) // Use RECEIVED instead of PENDING
                 .priority(request.getPriority())
-                .estimatedCost(request.getEstimatedCost())
+                .estimateCost(request.getEstimatedCost()) // Use estimateCost instead of estimatedCost
                 .actualCost(BigDecimal.ZERO)
-                .receivedDate(LocalDateTime.now())
+                .receivedAt(LocalDateTime.now()) // Use receivedAt instead of receivedDate
                 .build();
 
         RepairTicket savedTicket = repairTicketRepository.save(repairTicket);
@@ -74,10 +73,9 @@ public class RepairTicketService {
         RepairTicket ticket = repairTicketRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Repair ticket not found with id: " + id));
 
-        ticket.setDeviceInfo(request.getDeviceInfo());
-        ticket.setIssueDescription(request.getIssueDescription());
+        ticket.setIssueDesc(request.getIssueDescription()); // Use issueDesc instead of deviceInfo
         ticket.setPriority(request.getPriority());
-        ticket.setEstimatedCost(request.getEstimatedCost());
+        ticket.setEstimateCost(request.getEstimatedCost()); // Use estimateCost instead of estimatedCost
 
         RepairTicket updatedTicket = repairTicketRepository.save(ticket);
         log.info("Repair ticket updated successfully");
@@ -120,7 +118,12 @@ public class RepairTicketService {
 
     @Transactional(readOnly = true)
     public List<RepairTicketResponse> getRepairTicketsByTechnician(Long technicianId) {
-        List<RepairTicket> tickets = repairTicketRepository.findByAssignedTechnicianIdOrderByCreatedAtDesc(technicianId);
+        // Use a simpler repository method that should exist
+        List<RepairTicket> allTickets = repairTicketRepository.findAll();
+        List<RepairTicket> tickets = allTickets.stream()
+                .filter(ticket -> ticket.getTechnician() != null && ticket.getTechnician().getId().equals(technicianId))
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .collect(Collectors.toList());
         return tickets.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
@@ -133,32 +136,32 @@ public class RepairTicketService {
         User technician = userRepository.findById(technicianId)
                 .orElseThrow(() -> new ResourceNotFoundException("Technician not found with id: " + technicianId));
 
-        if (ticket.getStatus() != RepairTicket.RepairStatus.PENDING) {
-            throw new IllegalStateException("Only pending tickets can be started");
+        if (ticket.getStatus() != RepairTicket.RepairStatus.RECEIVED) { // Use RECEIVED instead of PENDING
+            throw new IllegalStateException("Only received tickets can be started");
         }
 
-        ticket.setStatus(RepairTicket.RepairStatus.IN_PROGRESS);
-        ticket.setAssignedTechnician(technician);
-        ticket.setStartDate(LocalDateTime.now());
+        ticket.setStatus(RepairTicket.RepairStatus.REPAIRING); // Use REPAIRING instead of IN_PROGRESS
+        ticket.setTechnician(technician); // Use technician instead of assignedTechnician
+        // Model doesn't have startDate field, skip this
 
         repairTicketRepository.save(ticket);
         log.info("Repair started successfully");
     }
 
-    public void completeRepair(Long id, BigDecimal actualCost, String completionNotes) {
+    public void completeRepair(Long id, BigDecimal actualCost, String diagnosis) { // Use diagnosis instead of completionNotes
         log.info("Completing repair for ticket id: {}", id);
 
         RepairTicket ticket = repairTicketRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Repair ticket not found with id: " + id));
 
-        if (ticket.getStatus() != RepairTicket.RepairStatus.IN_PROGRESS) {
-            throw new IllegalStateException("Only in-progress tickets can be completed");
+        if (ticket.getStatus() != RepairTicket.RepairStatus.REPAIRING) { // Use REPAIRING instead of IN_PROGRESS
+            throw new IllegalStateException("Only repairing tickets can be completed");
         }
 
-        ticket.setStatus(RepairTicket.RepairStatus.COMPLETED);
+        ticket.setStatus(RepairTicket.RepairStatus.DONE); // Use DONE instead of COMPLETED
         ticket.setActualCost(actualCost);
-        ticket.setCompletionNotes(completionNotes);
-        ticket.setCompletedDate(LocalDateTime.now());
+        ticket.setDiagnosis(diagnosis); // Use diagnosis instead of completionNotes
+        ticket.setClosedAt(LocalDateTime.now()); // Use closedAt instead of completedDate
 
         repairTicketRepository.save(ticket);
         log.info("Repair completed successfully");
@@ -170,12 +173,12 @@ public class RepairTicketService {
         RepairTicket ticket = repairTicketRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Repair ticket not found with id: " + id));
 
-        if (ticket.getStatus() != RepairTicket.RepairStatus.COMPLETED) {
-            throw new IllegalStateException("Only completed tickets can be delivered");
+        if (ticket.getStatus() != RepairTicket.RepairStatus.DONE) { // Use DONE instead of COMPLETED
+            throw new IllegalStateException("Only done tickets can be delivered");
         }
 
         ticket.setStatus(RepairTicket.RepairStatus.DELIVERED);
-        ticket.setDeliveredDate(LocalDateTime.now());
+        // Model doesn't have deliveredDate field, skip this
 
         repairTicketRepository.save(ticket);
         log.info("Device delivered successfully");
@@ -193,7 +196,8 @@ public class RepairTicketService {
         }
 
         ticket.setStatus(RepairTicket.RepairStatus.CANCELLED);
-        ticket.setCancellationReason(cancellationReason);
+        // Model doesn't have cancellationReason field, use diagnosis instead
+        ticket.setDiagnosis("Cancelled: " + cancellationReason);
 
         repairTicketRepository.save(ticket);
         log.info("Repair cancelled successfully");
@@ -213,21 +217,17 @@ public class RepairTicketService {
                 .customerName(ticket.getCustomer().getFullName())
                 .customerPhone(ticket.getCustomer().getPhone())
                 .serialUnitId(ticket.getSerialUnit() != null ? ticket.getSerialUnit().getId() : null)
-                .serialNumber(ticket.getSerialUnit() != null ? ticket.getSerialUnit().getSerialNumber() : null)
-                .deviceInfo(ticket.getDeviceInfo())
-                .issueDescription(ticket.getIssueDescription())
+                .serialNumber(ticket.getSerialUnit() != null ? ticket.getSerialUnit().getImei() : null) // Use imei instead of serialNumber
+                .issueDescription(ticket.getIssueDesc()) // Use issueDesc field
                 .status(ticket.getStatus())
                 .priority(ticket.getPriority())
-                .estimatedCost(ticket.getEstimatedCost())
+                .estimatedCost(ticket.getEstimateCost()) // Use estimateCost field
                 .actualCost(ticket.getActualCost())
-                .assignedTechnicianId(ticket.getAssignedTechnician() != null ? ticket.getAssignedTechnician().getId() : null)
-                .assignedTechnicianName(ticket.getAssignedTechnician() != null ? ticket.getAssignedTechnician().getFullName() : null)
-                .completionNotes(ticket.getCompletionNotes())
-                .cancellationReason(ticket.getCancellationReason())
-                .receivedDate(ticket.getReceivedDate())
-                .startDate(ticket.getStartDate())
-                .completedDate(ticket.getCompletedDate())
-                .deliveredDate(ticket.getDeliveredDate())
+                .assignedTechnicianId(ticket.getTechnician() != null ? ticket.getTechnician().getId() : null)
+                .assignedTechnicianName(ticket.getTechnician() != null ? ticket.getTechnician().getFullName() : null)
+                .completionNotes(ticket.getDiagnosis()) // Use diagnosis for completion notes
+                .receivedDate(ticket.getReceivedAt()) // Use receivedAt field
+                .completedDate(ticket.getClosedAt()) // Use closedAt for completedDate field
                 .createdAt(ticket.getCreatedAt())
                 .updatedAt(ticket.getUpdatedAt())
                 .build();

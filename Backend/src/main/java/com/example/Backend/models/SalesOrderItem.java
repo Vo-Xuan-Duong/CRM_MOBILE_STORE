@@ -46,24 +46,12 @@ public class SalesOrderItem {
 
     @NotNull
     @DecimalMin(value = "0.0", inclusive = true)
-    @Column(nullable = false, precision = 12, scale = 2)
-    @Builder.Default
-    private BigDecimal discount = BigDecimal.ZERO;
-
-    @NotNull
-    @DecimalMin(value = "0.0", inclusive = true)
     @Column(name = "line_total", nullable = false, precision = 12, scale = 2)
     private BigDecimal lineTotal;
 
-    @Min(value = 0, message = "Warranty months must be non-negative")
-    @Column(name = "warranty_months", nullable = false)
-    @Builder.Default
-    private Integer warrantyMonths = 12;
-
     // Business logic methods
     public BigDecimal calculateLineTotal() {
-        BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(quantity));
-        return subtotal.subtract(discount);
+        return unitPrice.multiply(BigDecimal.valueOf(quantity));
     }
 
     public void updateLineTotal() {

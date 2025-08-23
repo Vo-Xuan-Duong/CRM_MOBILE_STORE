@@ -1,7 +1,8 @@
 package com.example.Backend.services;
 
-import com.example.Backend.dtos.order.SalesOrderRequest;
-import com.example.Backend.dtos.order.SalesOrderResponse;
+import com.example.Backend.dtos.salesorder.SalesOrderRequest;
+import com.example.Backend.dtos.salesorder.SalesOrderResponse;
+import com.example.Backend.dtos.salesorder.SalesOrderItemRequest;
 import com.example.Backend.exceptions.OrderException;
 import com.example.Backend.exceptions.StockException;
 import com.example.Backend.mappers.SalesOrderMapper;
@@ -9,6 +10,7 @@ import com.example.Backend.models.*;
 import com.example.Backend.models.SalesOrder.OrderStatus;
 import com.example.Backend.repositorys.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -16,79 +18,94 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @Transactional
 @RequiredArgsConstructor
+@Slf4j
 public class SalesOrderService {
 
     private final SalesOrderRepository salesOrderRepository;
+    private final SalesOrderItemRepository salesOrderItemRepository;
     private final CustomerRepository customerRepository;
-    private final UserRepository userRepository;
     private final SKURepository skuRepository;
     private final StockItemRepository stockItemRepository;
     private final StockMovementRepository stockMovementRepository;
     private final SalesOrderMapper salesOrderMapper;
+    private final AuthService authService;
 
-    public SalesOrderResponse createOrder(SalesOrderRequest request, Long userId) {
-        Customer customer = findCustomerById(request.getCustomerId());
-        User user = findUserById(userId);
+    public SalesOrderResponse createOrder(SalesOrderRequest request) {
+        try {
+            Customer customer = findCustomerById(request.getCustomerId());
+            User user = authService.getCurrentUser();
 
-        String orderNumber = generateOrderNumber();
+            SalesOrder order = SalesOrder.builder()
+                    .customer(customer)
+                    .user(user)
+                    .status(OrderStatus.DRAFT)
+                    .paymentMethod(request.getPaymentMethod())
+                    .subtotal(BigDecimal.ZERO)
+                    .discount(request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO)
+                    .total(BigDecimal.ZERO)
+                    .notes(request.getNotes())
+                    .build();
 
-        SalesOrder order = SalesOrder.builder()
-                .orderNumber(orderNumber)
-                .customer(customer)
-                .user(user)
-                .status(OrderStatus.DRAFT)
-                .paymentMethod(request.getPaymentMethod())
-                .subtotal(BigDecimal.ZERO)
-                .discount(request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO)
-                .taxAmount(BigDecimal.ZERO)
-                .total(BigDecimal.ZERO)
-                .notes(request.getNotes())
-                .orderDate(LocalDate.now())
-                .build();
+            SalesOrder savedOrder = salesOrderRepository.save(order);
 
-        SalesOrder savedOrder = salesOrderRepository.save(order);
+            // Add order items if provided
+            if (request.getItems() != null && !request.getItems().isEmpty()) {
 
-        // Add order items if provided
-        if (request.getItems() != null && !request.getItems().isEmpty()) {
-            addItemsToOrder(savedOrder, request.getItems());
+                addItemsToOrder(savedOrder, request.getItems());
+
+                calculateOrderTotals(savedOrder);
+
+                savedOrder = salesOrderRepository.save(savedOrder);
+            }
+
+            return salesOrderMapper.toResponse(savedOrder);
+        } catch (Exception e) {
+            log.error("Error creating sales order: {}", e.getMessage());
+            throw e;
         }
-
-        return salesOrderMapper.toResponse(savedOrder);
     }
 
     public SalesOrderResponse updateOrder(Long id, SalesOrderRequest request) {
-        SalesOrder order = findOrderById(id);
+        try {
+            log.info("Updating sales order ID: {}", id);
 
-        if (!order.isCancellable()) {
-            throw new OrderException("Order cannot be modified in current status: " + order.getStatus());
+            SalesOrder order = findOrderById(id);
+
+            if (!order.isCancellable()) {
+                throw new OrderException("Order cannot be modified in current status: " + order.getStatus());
+            }
+
+            // Update basic order information
+            order.setPaymentMethod(request.getPaymentMethod());
+            order.setDiscount(request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO);
+            order.setNotes(request.getNotes());
+
+            // Update order items if provided
+            if (request.getItems() != null) {
+                updateOrderItems(order, request.getItems());
+            }
+
+            // Recalculate totals after items update
+            calculateOrderTotals(order);
+
+            SalesOrder savedOrder = salesOrderRepository.save(order);
+            log.info("Successfully updated sales order ID: {}", id);
+            return salesOrderMapper.toResponse(savedOrder);
+        } catch (Exception e) {
+            log.error("Error updating sales order ID {}: {}", id, e.getMessage());
+            throw e;
         }
-
-        order.setPaymentMethod(request.getPaymentMethod());
-        order.setDiscount(request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO);
-        order.setNotes(request.getNotes());
-
-        // Recalculate totals
-        calculateOrderTotals(order);
-
-        SalesOrder savedOrder = salesOrderRepository.save(order);
-        return salesOrderMapper.toResponse(savedOrder);
     }
 
     public SalesOrderResponse getOrderById(Long id) {
         SalesOrder order = findOrderById(id);
-        return salesOrderMapper.toResponse(order);
-    }
-
-    public SalesOrderResponse getOrderByNumber(String orderNumber) {
-        SalesOrder order = salesOrderRepository.findByOrderNumber(orderNumber)
-                .orElseThrow(() -> new OrderException("Order not found with number: " + orderNumber));
         return salesOrderMapper.toResponse(order);
     }
 
@@ -194,36 +211,75 @@ public class SalesOrderService {
                     .order(order)
                     .sku(sku)
                     .quantity(itemRequest.getQuantity())
-                    .unitPrice(itemRequest.getUnitPrice() != null ? itemRequest.getUnitPrice() : sku.getPrice())
-                    .discount(itemRequest.getDiscount() != null ? itemRequest.getDiscount() : BigDecimal.ZERO)
-                    .warrantyMonths(itemRequest.getWarrantyMonths() != null ? itemRequest.getWarrantyMonths() : 12)
+                    .unitPrice(sku.getPrice())
                     .build();
 
             item.updateLineTotal();
-            order.getItems().add(item);
+
+        }
+    }
+
+    private void updateOrderItems(SalesOrder order, List<SalesOrderItemRequest> itemRequests) {
+        // Get all existing items for this order
+        List<SalesOrderItem> existingItems = getOrderItems(order.getId());
+
+        // Clear existing items
+        for (SalesOrderItem existingItem : existingItems) {
+            salesOrderItemRepository.delete(existingItem);
         }
 
-        calculateOrderTotals(order);
+        // Add new items
+        if (itemRequests != null && !itemRequests.isEmpty()) {
+            for (SalesOrderItemRequest itemRequest : itemRequests) {
+                SKU sku = findSkuById(itemRequest.getSkuId());
+
+                // Check stock availability
+                if (!checkStockAvailability(sku.getId(), itemRequest.getQuantity())) {
+                    throw new StockException("Insufficient stock for SKU: " + sku.getId());
+                }
+
+                SalesOrderItem item = SalesOrderItem.builder()
+                        .order(order)
+                        .sku(sku)
+                        .quantity(itemRequest.getQuantity())
+                        .unitPrice(sku.getPrice())
+                        .build();
+
+                item.updateLineTotal();
+                salesOrderItemRepository.save(item);
+            }
+        }
     }
 
     private void calculateOrderTotals(SalesOrder order) {
-        BigDecimal subtotal = order.getItems().stream()
-                .map(SalesOrderItem::getLineTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        try {
+            List<SalesOrderItem> items = getOrderItems(order.getId());
 
-        order.setSubtotal(subtotal);
+            BigDecimal subtotal = items.stream()
+                    .map(SalesOrderItem::getLineTotal)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add); // Fix ambiguous reference
 
-        // Calculate tax (assuming 10% VAT)
-        BigDecimal taxAmount = subtotal.multiply(new BigDecimal("0.10"));
-        order.setTaxAmount(taxAmount);
+            order.setSubtotal(subtotal);
 
-        // Calculate total
-        BigDecimal total = subtotal.add(taxAmount).subtract(order.getDiscount());
-        order.setTotal(total);
+            // Calculate tax (assuming 10% VAT)
+            BigDecimal taxAmount = subtotal.multiply(new BigDecimal("0.10"));
+            order.setTaxAmount(taxAmount);
+
+            // Calculate total
+            BigDecimal total = subtotal.add(taxAmount).subtract(order.getDiscount());
+            order.setTotal(total);
+        } catch (Exception e) {
+            log.error("Error calculating order totals for order ID {}: {}", order.getId(), e.getMessage());
+
+            order.setSubtotal(BigDecimal.ZERO);
+            order.setTaxAmount(BigDecimal.ZERO);
+            order.setTotal(BigDecimal.ZERO);
+        }
     }
 
     private void reserveStockForOrder(SalesOrder order) {
-        for (SalesOrderItem item : order.getItems()) {
+        List<SalesOrderItem> items = getOrderItems(order.getId());
+        for (SalesOrderItem item : items) {
             int reserved = stockItemRepository.reserveStock(item.getSku().getId(), item.getQuantity());
             if (reserved == 0) {
                 throw new StockException("Failed to reserve stock for SKU: " + item.getSku().getId());
@@ -232,13 +288,15 @@ public class SalesOrderService {
     }
 
     private void releaseReservedStockForOrder(SalesOrder order) {
-        for (SalesOrderItem item : order.getItems()) {
+        List<SalesOrderItem> items = getOrderItems(order.getId());
+        for (SalesOrderItem item : items) {
             stockItemRepository.releaseReservation(item.getSku().getId(), item.getQuantity());
         }
     }
 
     private void processStockMovements(SalesOrder order) {
-        for (SalesOrderItem item : order.getItems()) {
+        List<SalesOrderItem> items = getOrderItems(order.getId());
+        for (SalesOrderItem item : items) {
             // Release reservation
             stockItemRepository.releaseReservation(item.getSku().getId(), item.getQuantity());
 
@@ -263,17 +321,19 @@ public class SalesOrderService {
         }
     }
 
+    private List<SalesOrderItem> getOrderItems(Long orderId) {
+        List<SalesOrderItem> items = salesOrderItemRepository.findByOrder_Id(orderId);
+        if (items == null || items.isEmpty()) {
+            log.warn("No items found for order ID: {}", orderId);
+            return new ArrayList<>();
+        }
+        return items;
+    }
+
     private boolean checkStockAvailability(Long skuId, Integer requiredQuantity) {
         return stockItemRepository.findBySkuId(skuId)
                 .map(stockItem -> stockItem.canReserve(requiredQuantity))
                 .orElse(false);
-    }
-
-    private String generateOrderNumber() {
-        String prefix = "SO";
-        String date = LocalDate.now().toString().replace("-", "");
-        long count = salesOrderRepository.count() + 1;
-        return String.format("%s%s%06d", prefix, date, count);
     }
 
     private SalesOrder findOrderById(Long id) {
@@ -284,11 +344,6 @@ public class SalesOrderService {
     private Customer findCustomerById(Long id) {
         return customerRepository.findById(id)
                 .orElseThrow(() -> new OrderException("Customer not found with id: " + id));
-    }
-
-    private User findUserById(Long id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new OrderException("User not found with id: " + id));
     }
 
     private SKU findSkuById(Long id) {

@@ -24,8 +24,6 @@ public interface InteractionRepository extends JpaRepository<Interaction, Long> 
 
     List<Interaction> findByCreatedAtBetweenOrderByCreatedAtDesc(LocalDateTime startDate, LocalDateTime endDate);
 
-    List<Interaction> findByRequiresFollowUpTrueAndFollowUpDateLessThanEqualOrderByFollowUpDateAsc(LocalDateTime date);
-
     @Query("SELECT i FROM Interaction i WHERE i.customer.id = :customerId AND i.type = :type")
     List<Interaction> findByCustomerIdAndType(@Param("customerId") Long customerId, @Param("type") Interaction.InteractionType type);
 

@@ -21,8 +21,6 @@ import com.example.Backend.models.User;
 @Repository
 public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long> {
 
-    Optional<SalesOrder> findByOrderNumber(String orderNumber);
-
     List<SalesOrder> findByCustomer(Customer customer);
 
     List<SalesOrder> findByCustomerId(Long customerId);
@@ -48,14 +46,12 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long> {
                                        @Param("maxTotal") BigDecimal maxTotal);
 
     @Query("SELECT so FROM SalesOrder so WHERE " +
-           "(:orderNumber IS NULL OR so.orderNumber LIKE CONCAT('%', :orderNumber, '%')) AND " +
            "(:customerId IS NULL OR so.customer.id = :customerId) AND " +
            "(:userId IS NULL OR so.user.id = :userId) AND " +
            "(:status IS NULL OR so.status = :status) AND " +
            "(:startDate IS NULL OR so.orderDate >= :startDate) AND " +
            "(:endDate IS NULL OR so.orderDate <= :endDate)")
-    Page<SalesOrder> findBySearchCriteria(@Param("orderNumber") String orderNumber,
-                                         @Param("customerId") Long customerId,
+    Page<SalesOrder> findBySearchCriteria(@Param("customerId") Long customerId,
                                          @Param("userId") Long userId,
                                          @Param("status") OrderStatus status,
                                          @Param("startDate") LocalDate startDate,
@@ -84,5 +80,13 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long> {
     List<Object[]> getSalesPerformanceByUser(@Param("startDate") LocalDate startDate,
                                             @Param("endDate") LocalDate endDate);
 
-    boolean existsByOrderNumber(String orderNumber);
+    // Customer statistics methods
+    @Query("SELECT COUNT(so) FROM SalesOrder so WHERE so.customer.id = :customerId AND so.status IN ('PAID', 'DELIVERED')")
+    Long countCompletedOrdersByCustomer(@Param("customerId") Long customerId);
+
+    @Query("SELECT COALESCE(SUM(so.total), 0) FROM SalesOrder so WHERE so.customer.id = :customerId AND so.status IN ('PAID', 'DELIVERED')")
+    BigDecimal getTotalSpentByCustomer(@Param("customerId") Long customerId);
+
+    @Query("SELECT MAX(so.createdAt) FROM SalesOrder so WHERE so.customer.id = :customerId AND so.status IN ('PAID', 'DELIVERED')")
+    Optional<LocalDateTime> getLastOrderDateByCustomer(@Param("customerId") Long customerId);
 }

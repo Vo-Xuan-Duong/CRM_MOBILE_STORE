@@ -42,9 +42,7 @@ public class PaymentController {
             Authentication authentication) {
         log.info("Creating payment for order ID: {}", createDTO.getOrderId());
 
-        Long currentUserId = getCurrentUserId(authentication);
-
-        PaymentResponseDTO payment = paymentService.createPayment(createDTO, currentUserId);
+        PaymentResponseDTO payment = paymentService.createPayment(createDTO);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ResponseData.<PaymentResponseDTO>builder()
@@ -62,7 +60,7 @@ public class PaymentController {
             @Parameter(description = "Gateway response") @RequestParam(required = false) String gatewayResponse) {
         log.info("Processing payment with ID: {}", id);
 
-        PaymentResponseDTO payment = paymentService.processPayment(id, gatewayResponse);
+        PaymentResponseDTO payment = paymentService.processPayment(id);
 
         return ResponseEntity.ok(ResponseData.<PaymentResponseDTO>builder()
                 .status(HttpStatus.OK.value())
@@ -80,7 +78,7 @@ public class PaymentController {
             @Parameter(description = "Refund reason") @RequestParam String refundReason) {
         log.info("Processing refund for payment ID: {} with amount: {}", id, refundAmount);
 
-        PaymentResponseDTO payment = paymentService.refundPayment(id, refundAmount, refundReason);
+        PaymentResponseDTO payment = paymentService.refundPayment(id, refundAmount);
 
         return ResponseEntity.ok(ResponseData.<PaymentResponseDTO>builder()
                 .status(HttpStatus.OK.value())
@@ -105,28 +103,28 @@ public class PaymentController {
                 .build());
     }
 
-    @GetMapping("/search")
-    @Operation(summary = "Search payments", description = "Search payments by keyword")
-    @PreAuthorize("hasAuthority('PAYMENT_READ')")
-    public ResponseEntity<ResponseData<Page<PaymentResponseDTO>>> searchPayments(
-            @Parameter(description = "Search keyword") @RequestParam(required = false) String keyword,
-            @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size,
-            @Parameter(description = "Sort field") @RequestParam(defaultValue = "createdAt") String sortBy,
-            @Parameter(description = "Sort direction") @RequestParam(defaultValue = "desc") String sortDir) {
-
-        Sort sort = sortDir.equalsIgnoreCase("desc") ?
-                Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
-        Pageable pageable = PageRequest.of(page, size, sort);
-
-        Page<PaymentResponseDTO> payments = paymentService.searchPayments(keyword, pageable);
-
-        return ResponseEntity.ok(ResponseData.<Page<PaymentResponseDTO>>builder()
-                .status(HttpStatus.OK.value())
-                .message("Payments retrieved successfully")
-                .data(payments)
-                .build());
-    }
+//    @GetMapping("/search")
+//    @Operation(summary = "Search payments", description = "Search payments by keyword")
+//    @PreAuthorize("hasAuthority('PAYMENT_READ')")
+//    public ResponseEntity<ResponseData<Page<PaymentResponseDTO>>> searchPayments(
+//            @Parameter(description = "Search keyword") @RequestParam(required = false) String keyword,
+//            @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
+//            @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size,
+//            @Parameter(description = "Sort field") @RequestParam(defaultValue = "createdAt") String sortBy,
+//            @Parameter(description = "Sort direction") @RequestParam(defaultValue = "desc") String sortDir) {
+//
+//        Sort sort = sortDir.equalsIgnoreCase("desc") ?
+//                Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+//        Pageable pageable = PageRequest.of(page, size, sort);
+//
+//        Page<PaymentResponseDTO> payments = paymentService.searchPayments(keyword, pageable);
+//
+//        return ResponseEntity.ok(ResponseData.<Page<PaymentResponseDTO>>builder()
+//                .status(HttpStatus.OK.value())
+//                .message("Payments retrieved successfully")
+//                .data(payments)
+//                .build());
+//    }
 
     @GetMapping("/customer/{customerId}")
     @Operation(summary = "Get payments by customer", description = "Get all payments for a specific customer")
@@ -186,7 +184,7 @@ public class PaymentController {
     @Operation(summary = "Get revenue by payment method", description = "Get total revenue by payment method for date range")
     @PreAuthorize("hasAuthority('PAYMENT_REPORT')")
     public ResponseEntity<ResponseData<BigDecimal>> getRevenueByMethod(
-            @Parameter(description = "Payment method") @RequestParam String method,
+            @Parameter(description = "Payment method") @RequestParam Payment.PaymentMethod method,
             @Parameter(description = "Start date")
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @Parameter(description = "End date")
@@ -199,10 +197,5 @@ public class PaymentController {
                 .message("Revenue by method report generated successfully")
                 .data(totalRevenue)
                 .build());
-    }
-
-    private Long getCurrentUserId(Authentication authentication) {
-        // Extract user ID from authentication context
-        return 1L; // Placeholder
     }
 }

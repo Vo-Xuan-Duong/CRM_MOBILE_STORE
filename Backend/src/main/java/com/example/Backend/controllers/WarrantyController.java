@@ -199,23 +199,12 @@ public class WarrantyController {
     @GetMapping("/statistics")
     @PreAuthorize("hasAuthority('REPORT_VIEW')")
     @Operation(summary = "Get warranty statistics")
-    public ResponseEntity<ResponseData<WarrantyStatistics>> getWarrantyStatistics() {
-        WarrantyStatistics stats = warrantyService.getWarrantyStatistics();
-        return ResponseEntity.ok(ResponseData.<WarrantyStatistics>builder()
+    public ResponseEntity<ResponseData<WarrantyService.WarrantyStatistics>> getWarrantyStatistics() {
+        WarrantyService.WarrantyStatistics stats = warrantyService.getWarrantyStatistics();
+        return ResponseEntity.ok(ResponseData.<WarrantyService.WarrantyStatistics>builder()
                 .status(HttpStatus.OK.value())
                 .message("Warranty statistics retrieved successfully")
                 .data(stats)
                 .build());
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    public static class WarrantyStatistics {
-        private long totalWarranties;
-        private long activeWarranties;
-        private long expiredWarranties;
-        private long voidWarranties;
-        private long claimedWarranties;
-        private long expiringWithin30Days;
     }
 }

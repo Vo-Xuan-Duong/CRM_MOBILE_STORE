@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -11,10 +12,6 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
 @Entity
@@ -27,10 +24,6 @@ public class SalesOrder {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @NotBlank(message = "Order number is required")
-    @Column(name = "order_number", nullable = false, unique = true)
-    private String orderNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
@@ -47,7 +40,7 @@ public class SalesOrder {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_method")
-    private PaymentMethod paymentMethod;
+    private Payment.PaymentMethod paymentMethod;
 
     @NotNull
     @DecimalMin(value = "0.0", inclusive = true)
@@ -88,6 +81,7 @@ public class SalesOrder {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Getter
     public enum OrderStatus {
         DRAFT("draft"),
         PENDING("pending"),
@@ -102,29 +96,7 @@ public class SalesOrder {
             this.value = value;
         }
 
-        public String getValue() {
-            return value;
-        }
     }
-
-    public enum PaymentMethod {
-        CASH("cash"),
-        CARD("card"),
-        TRANSFER("transfer"),
-        INSTALLMENT("installment"),
-        OTHER("other");
-
-        private final String value;
-
-        PaymentMethod(String value) {
-            this.value = value;
-        }
-
-        public String getValue() {
-            return value;
-        }
-    }
-
     // Business logic methods
     public boolean isPaid() {
         return status == OrderStatus.PAID;

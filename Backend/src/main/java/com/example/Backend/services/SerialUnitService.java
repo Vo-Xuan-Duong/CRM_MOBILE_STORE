@@ -36,7 +36,6 @@ public class SerialUnitService {
         SerialUnit serialUnit = SerialUnit.builder()
                 .sku(sku)
                 .imei(request.getImei())
-                .serialNumber(request.getSerialNumber())
                 .status(SerialUnit.SerialStatus.IN_STOCK)
                 .purchaseDate(request.getPurchaseDate())
                 .notes(request.getNotes())

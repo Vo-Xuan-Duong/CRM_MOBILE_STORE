@@ -6,221 +6,242 @@ import com.example.Backend.dtos.stock.StockMovementRequest;
 import com.example.Backend.dtos.stock.StockMovementResponse;
 import com.example.Backend.services.StockService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/stock")
+@RequestMapping("/api/stock")
 @RequiredArgsConstructor
-@Tag(name = "Stock", description = "Stock Management API")
+@Validated
+@Slf4j
+@Tag(name = "Stock Management", description = "API quản lý kho hàng và tồn kho")
 public class StockController {
 
     private final StockService stockService;
 
     @GetMapping("/sku/{skuId}")
-    @PreAuthorize("hasAuthority('INVENTORY_READ')")
-    @Operation(summary = "Get stock by SKU ID")
-    public ResponseEntity<ResponseData<StockItemResponse>> getStockBySkuId(@PathVariable Long skuId) {
-        StockItemResponse response = stockService.getStockBySkuId(skuId);
-        return ResponseEntity.ok(ResponseData.<StockItemResponse>builder()
-                .status(HttpStatus.OK.value())
-                .message("Stock retrieved successfully")
-                .data(response)
-                .build());
+    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
+    @Operation(summary = "Lấy thông tin tồn kho theo SKU ID", description = "Lấy thông tin chi tiết về tồn kho của một SKU")
+    public ResponseEntity<ResponseData<StockItemResponse>> getStockBySkuId(
+            @Parameter(description = "SKU ID") @PathVariable Long skuId) {
+        try {
+            log.info("Getting stock for SKU ID: {}", skuId);
+            StockItemResponse response = stockService.getStockBySkuId(skuId);
+            return ResponseEntity.ok(ResponseData.<StockItemResponse>builder()
+                    .status(HttpStatus.OK.value())
+                    .message("Lấy thông tin tồn kho thành công")
+                    .data(response)
+                    .build());
+        } catch (Exception e) {
+            log.error("Error getting stock for SKU ID {}: {}", skuId, e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ResponseData.<StockItemResponse>builder()
+                            .status(HttpStatus.BAD_REQUEST.value())
+                            .message("Lỗi lấy thông tin tồn kho: " + e.getMessage())
+                            .build());
+        }
     }
 
     @GetMapping("/all")
-    @PreAuthorize("hasAuthority('INVENTORY_READ')")
-    @Operation(summary = "Get all stock items")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
+    @Operation(summary = "Lấy tất cả thông tin tồn kho", description = "Lấy danh sách tất cả các item trong kho")
     public ResponseEntity<ResponseData<List<StockItemResponse>>> getAllStockItems() {
-        List<StockItemResponse> response = stockService.getAllStockItems();
-        return ResponseEntity.ok(ResponseData.<List<StockItemResponse>>builder()
-                .status(HttpStatus.OK.value())
-                .message("All stock items retrieved successfully")
-                .data(response)
-                .build());
+        try {
+            log.info("Getting all stock items");
+            List<StockItemResponse> response = stockService.getAllStockItems();
+            return ResponseEntity.ok(ResponseData.<List<StockItemResponse>>builder()
+                    .status(HttpStatus.OK.value())
+                    .message("Lấy danh sách tồn kho thành công")
+                    .data(response)
+                    .build());
+        } catch (Exception e) {
+            log.error("Error getting all stock items: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ResponseData.<List<StockItemResponse>>builder()
+                            .status(HttpStatus.BAD_REQUEST.value())
+                            .message("Lỗi lấy danh sách tồn kho: " + e.getMessage())
+                            .build());
+        }
     }
 
     @GetMapping("/low-stock")
-    @PreAuthorize("hasAuthority('INVENTORY_READ')")
-    @Operation(summary = "Get low stock items")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
+    @Operation(summary = "Lấy danh sách hàng sắp hết", description = "Lấy danh sách các item có tồn kho thấp")
     public ResponseEntity<ResponseData<List<StockItemResponse>>> getLowStockItems() {
-        List<StockItemResponse> response = stockService.getLowStockItems();
-        return ResponseEntity.ok(ResponseData.<List<StockItemResponse>>builder()
-                .status(HttpStatus.OK.value())
-                .message("Low stock items retrieved successfully")
-                .data(response)
-                .build());
+        try {
+            log.info("Getting low stock items");
+            List<StockItemResponse> response = stockService.getLowStockItems();
+            return ResponseEntity.ok(ResponseData.<List<StockItemResponse>>builder()
+                    .status(HttpStatus.OK.value())
+                    .message("Lấy danh sách hàng sắp hết thành công")
+                    .data(response)
+                    .build());
+        } catch (Exception e) {
+            log.error("Error getting low stock items: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ResponseData.<List<StockItemResponse>>builder()
+                            .status(HttpStatus.BAD_REQUEST.value())
+                            .message("Lỗi lấy danh sách hàng sắp hết: " + e.getMessage())
+                            .build());
+        }
     }
 
     @GetMapping("/out-of-stock")
-    @PreAuthorize("hasAuthority('INVENTORY_READ')")
-    @Operation(summary = "Get out of stock items")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
+    @Operation(summary = "Lấy danh sách hàng hết hàng", description = "Lấy danh sách các item đã hết hàng")
     public ResponseEntity<ResponseData<List<StockItemResponse>>> getOutOfStockItems() {
-        List<StockItemResponse> response = stockService.getOutOfStockItems();
-        return ResponseEntity.ok(ResponseData.<List<StockItemResponse>>builder()
-                .status(HttpStatus.OK.value())
-                .message("Out of stock items retrieved successfully")
-                .data(response)
-                .build());
+        try {
+            log.info("Getting out of stock items");
+            List<StockItemResponse> response = stockService.getOutOfStockItems();
+            return ResponseEntity.ok(ResponseData.<List<StockItemResponse>>builder()
+                    .status(HttpStatus.OK.value())
+                    .message("Lấy danh sách hàng hết hàng thành công")
+                    .data(response)
+                    .build());
+        } catch (Exception e) {
+            log.error("Error getting out of stock items: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ResponseData.<List<StockItemResponse>>builder()
+                            .status(HttpStatus.BAD_REQUEST.value())
+                            .message("Lỗi lấy danh sách hàng hết hàng: " + e.getMessage())
+                            .build());
+        }
     }
 
-    @PostMapping("/add")
-    @PreAuthorize("hasAuthority('INVENTORY_UPDATE')")
-    @Operation(summary = "Add stock")
-    public ResponseEntity<ResponseData<StockMovementResponse>> addStock(
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
+    @Operation(summary = "Lấy danh sách tồn kho với phân trang", description = "Lấy danh sách tồn kho có phân trang và sắp xếp")
+    public ResponseEntity<ResponseData<List<StockItemResponse>>> getStockItemsWithPagination(
+            @Parameter(description = "Số trang (bắt đầu từ 0)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Kích thước trang") @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "Sắp xếp theo trường") @RequestParam(defaultValue = "id") String sortBy,
+            @Parameter(description = "Hướng sắp xếp") @RequestParam(defaultValue = "asc") String sortDir) {
+        try {
+            log.info("Getting stock items with basic pagination simulation");
+
+            // Use existing method as temporary solution until proper pagination is implemented
+            List<StockItemResponse> allItems = stockService.getAllStockItems();
+
+            // Basic manual pagination (temporary solution)
+            int start = page * size;
+            int end = Math.min(start + size, allItems.size());
+            List<StockItemResponse> paginatedItems = start < allItems.size() ?
+                allItems.subList(start, end) : List.of();
+
+            return ResponseEntity.ok(ResponseData.<List<StockItemResponse>>builder()
+                    .status(HttpStatus.OK.value())
+                    .message("Lấy danh sách tồn kho thành công (pagination cơ bản)")
+                    .data(paginatedItems)
+                    .build());
+        } catch (Exception e) {
+            log.error("Error getting stock items with pagination: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ResponseData.<List<StockItemResponse>>builder()
+                            .status(HttpStatus.BAD_REQUEST.value())
+                            .message("Lỗi lấy danh sách tồn kho: " + e.getMessage())
+                            .build());
+        }
+    }
+
+    // ==================== STOCK MOVEMENT ENDPOINTS ====================
+
+    @PostMapping("/movements")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('WAREHOUSE_MANAGER')")
+    @Operation(summary = "Tạo chuyển động kho", description = "Tạo một giao dịch nhập/xuất kho")
+    public ResponseEntity<ResponseData<String>> createStockMovement(
             @Valid @RequestBody StockMovementRequest request,
             Authentication authentication) {
-        Long userId = getUserIdFromAuth(authentication);
-        StockMovementResponse response = stockService.addStock(request, userId);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ResponseData.<StockMovementResponse>builder()
-                        .status(HttpStatus.CREATED.value())
-                        .message("Stock added successfully")
-                        .data(response)
-                        .build());
-    }
-
-    @PostMapping("/remove")
-    @PreAuthorize("hasAuthority('INVENTORY_UPDATE')")
-    @Operation(summary = "Remove stock")
-    public ResponseEntity<ResponseData<StockMovementResponse>> removeStock(
-            @Valid @RequestBody StockMovementRequest request,
-            Authentication authentication) {
-        Long userId = getUserIdFromAuth(authentication);
-        StockMovementResponse response = stockService.removeStock(request, userId);
-        return ResponseEntity.ok(ResponseData.<StockMovementResponse>builder()
-                .status(HttpStatus.OK.value())
-                .message("Stock removed successfully")
-                .data(response)
-                .build());
-    }
-
-    @PutMapping("/adjust/{skuId}")
-    @PreAuthorize("hasAuthority('INVENTORY_UPDATE')")
-    @Operation(summary = "Adjust stock")
-    public ResponseEntity<ResponseData<StockItemResponse>> adjustStock(
-            @PathVariable Long skuId,
-            @RequestParam Integer newQuantity,
-            @RequestParam String reason,
-            Authentication authentication) {
-        Long userId = getUserIdFromAuth(authentication);
-        StockItemResponse response = stockService.adjustStock(skuId, newQuantity, reason, userId);
-        return ResponseEntity.ok(ResponseData.<StockItemResponse>builder()
-                .status(HttpStatus.OK.value())
-                .message("Stock adjusted successfully")
-                .data(response)
-                .build());
-    }
-
-    @PostMapping("/reserve")
-    @PreAuthorize("hasAuthority('INVENTORY_UPDATE')")
-    @Operation(summary = "Reserve stock")
-    public ResponseEntity<ResponseData<Boolean>> reserveStock(
-            @RequestParam Long skuId,
-            @RequestParam Integer quantity) {
-        boolean success = stockService.reserveStock(skuId, quantity);
-        return ResponseEntity.ok(ResponseData.<Boolean>builder()
-                .status(HttpStatus.OK.value())
-                .message(success ? "Stock reserved successfully" : "Failed to reserve stock")
-                .data(success)
-                .build());
-    }
-
-    @PostMapping("/release-reservation")
-    @PreAuthorize("hasAuthority('INVENTORY_UPDATE')")
-    @Operation(summary = "Release stock reservation")
-    public ResponseEntity<ResponseData<Boolean>> releaseReservation(
-            @RequestParam Long skuId,
-            @RequestParam Integer quantity) {
-        boolean success = stockService.releaseReservation(skuId, quantity);
-        return ResponseEntity.ok(ResponseData.<Boolean>builder()
-                .status(HttpStatus.OK.value())
-                .message(success ? "Reservation released successfully" : "Failed to release reservation")
-                .data(success)
-                .build());
+        try {
+            log.info("Creating stock movement for SKU ID: {}", request.getSkuId());
+            // TODO: Implement stockService.createStockMovement() method
+            return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+                    .body(ResponseData.<String>builder()
+                            .status(HttpStatus.NOT_IMPLEMENTED.value())
+                            .message("Chức năng tạo chuyển động kho chưa được implement")
+                            .data("Vui lòng implement StockService.createStockMovement() method")
+                            .build());
+        } catch (Exception e) {
+            log.error("Error creating stock movement: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ResponseData.<String>builder()
+                            .status(HttpStatus.BAD_REQUEST.value())
+                            .message("Lỗi tạo chuyển động kho: " + e.getMessage())
+                            .build());
+        }
     }
 
     @GetMapping("/movements")
-    @PreAuthorize("hasAuthority('INVENTORY_READ')")
-    @Operation(summary = "Get stock movements")
-    public ResponseEntity<ResponseData<Page<StockMovementResponse>>> getStockMovements(
-            @PageableDefault(size = 20) Pageable pageable) {
-        Page<StockMovementResponse> response = stockService.getStockMovements(pageable);
-        return ResponseEntity.ok(ResponseData.<Page<StockMovementResponse>>builder()
-                .status(HttpStatus.OK.value())
-                .message("Stock movements retrieved successfully")
-                .data(response)
-                .build());
+    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
+    @Operation(summary = "Lấy lịch sử chuyển động kho", description = "Lấy danh sách các giao dịch nhập/xuất kho")
+    public ResponseEntity<ResponseData<String>> getStockMovements(
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        try {
+            log.info("Getting stock movements with pagination");
+            // TODO: Implement stockService.getStockMovements() method
+            return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+                    .body(ResponseData.<String>builder()
+                            .status(HttpStatus.NOT_IMPLEMENTED.value())
+                            .message("Chức năng lấy lịch sử chuyển động kho chưa được implement")
+                            .data("Vui lòng implement StockService.getStockMovements() method")
+                            .build());
+        } catch (Exception e) {
+            log.error("Error getting stock movements: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ResponseData.<String>builder()
+                            .status(HttpStatus.BAD_REQUEST.value())
+                            .message("Lỗi lấy lịch sử chuyển động kho: " + e.getMessage())
+                            .build());
+        }
     }
 
-    @GetMapping("/movements/sku/{skuId}")
-    @PreAuthorize("hasAuthority('INVENTORY_READ')")
-    @Operation(summary = "Get stock movements by SKU")
-    public ResponseEntity<ResponseData<List<StockMovementResponse>>> getStockMovementsBySkuId(
-            @PathVariable Long skuId) {
-        List<StockMovementResponse> response = stockService.getStockMovementsBySkuId(skuId);
-        return ResponseEntity.ok(ResponseData.<List<StockMovementResponse>>builder()
-                .status(HttpStatus.OK.value())
-                .message("Stock movements by SKU retrieved successfully")
-                .data(response)
-                .build());
-    }
-
-    @PutMapping("/levels/{skuId}")
-    @PreAuthorize("hasAuthority('INVENTORY_UPDATE')")
-    @Operation(summary = "Update stock levels")
-    public ResponseEntity<ResponseData<Void>> updateStockLevels(
-            @PathVariable Long skuId,
-            @RequestParam Integer minStock,
-            @RequestParam(required = false) Integer maxStock) {
-        stockService.updateStockLevels(skuId, minStock, maxStock);
-        return ResponseEntity.ok(ResponseData.<Void>builder()
-                .status(HttpStatus.OK.value())
-                .message("Stock levels updated successfully")
-                .build());
-    }
+    // ==================== STOCK STATISTICS ====================
 
     @GetMapping("/statistics")
-    @PreAuthorize("hasAuthority('INVENTORY_READ')")
-    @Operation(summary = "Get stock statistics")
-    public ResponseEntity<ResponseData<StockStatistics>> getStockStatistics() {
-        StockStatistics stats = StockStatistics.builder()
-                .totalStockValue(stockService.getTotalStockValue())
-                .totalStockQuantity(stockService.getTotalStockQuantity())
-                .totalReservedQuantity(stockService.getTotalReservedQuantity())
-                .lowStockItemCount(stockService.getLowStockItemCount())
-                .build();
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Lấy thống kê tồn kho", description = "Lấy các số liệu thống kê về tồn kho")
+    public ResponseEntity<ResponseData<Object>> getStockStatistics() {
+        try {
+            log.info("Getting stock statistics");
+            // Basic statistics using available methods
+            List<StockItemResponse> allItems = stockService.getAllStockItems();
+            List<StockItemResponse> lowStock = stockService.getLowStockItems();
+            List<StockItemResponse> outOfStock = stockService.getOutOfStockItems();
 
-        return ResponseEntity.ok(ResponseData.<StockStatistics>builder()
-                .status(HttpStatus.OK.value())
-                .message("Stock statistics retrieved successfully")
-                .data(stats)
-                .build());
-    }
+            var statistics = java.util.Map.of(
+                "totalItems", allItems.size(),
+                "lowStockItems", lowStock.size(),
+                "outOfStockItems", outOfStock.size(),
+                "inStockItems", allItems.size() - outOfStock.size()
+            );
 
-    private Long getUserIdFromAuth(Authentication authentication) {
-        // Implementation to extract user ID from authentication
-        return 1L; // Placeholder
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    public static class StockStatistics {
-        private Long totalStockValue;
-        private Long totalStockQuantity;
-        private Long totalReservedQuantity;
-        private long lowStockItemCount;
+            return ResponseEntity.ok(ResponseData.<Object>builder()
+                    .status(HttpStatus.OK.value())
+                    .message("Lấy thống kê tồn kho thành công")
+                    .data(statistics)
+                    .build());
+        } catch (Exception e) {
+            log.error("Error getting stock statistics: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ResponseData.<Object>builder()
+                            .status(HttpStatus.BAD_REQUEST.value())
+                            .message("Lỗi lấy thống kê tồn kho: " + e.getMessage())
+                            .build());
+        }
     }
 }

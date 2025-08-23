@@ -33,9 +33,6 @@ public class SerialUnit {
     @Column(nullable = false, unique = true)
     private String imei;
 
-    @Column(name = "serial_number")
-    private String serialNumber;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default

@@ -26,16 +26,11 @@ public class CustomerCreateDTO {
     @Email(message = "Email không hợp lệ")
     private String email;
 
-    private LocalDate birthDate;
-
     private Customer.Gender gender;
 
+    private LocalDate birthDate;
     // Thông tin địa chỉ
-    private String addressLine;
-    private String ward;
-    private String district;
-    private String city;
-    private String province;
+    private String address;
 
     private String note;
 }

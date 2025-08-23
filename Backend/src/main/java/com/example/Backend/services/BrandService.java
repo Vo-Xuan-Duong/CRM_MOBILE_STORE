@@ -1,7 +1,11 @@
 package com.example.Backend.services;
 
+import com.example.Backend.dtos.brand.BrandCreateDTO;
+import com.example.Backend.dtos.brand.BrandResponseDTO;
+import com.example.Backend.dtos.brand.BrandUpdateDTO;
 import com.example.Backend.models.Brand;
 import com.example.Backend.repositorys.BrandRepository;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -23,58 +27,50 @@ public class BrandService {
     private final BrandRepository brandRepository;
 
     // Tạo thương hiệu mới
-    public Brand createBrand(Brand brand) {
-        log.info("Tạo thương hiệu mới: {}", brand.getName());
-
-        // Validate dữ liệu đầu vào
-        validateBrandData(brand);
+    public BrandResponseDTO createBrand(BrandCreateDTO brandCreateDTO) {
+        log.info("Tạo thương hiệu mới: {}", brandCreateDTO.getName());
 
         // Kiểm tra tên thương hiệu đã tồn tại
-        if (brandRepository.existsByName(brand.getName().trim())) {
-            throw new RuntimeException("Tên thương hiệu '" + brand.getName() + "' đã tồn tại");
+        if (brandRepository.existsByName(brandCreateDTO.getName().trim())) {
+            throw new RuntimeException("Tên thương hiệu '" + brandCreateDTO.getName() + "' đã tồn tại");
         }
 
-        // Chuẩn hóa dữ liệu
-        brand.setName(brand.getName().trim());
-        if (brand.getCountry() != null) {
-            brand.setCountry(brand.getCountry().trim());
-        }
-        if (brand.getWebsite() != null) {
-            brand.setWebsite(brand.getWebsite().trim());
-        }
+        Brand brand = Brand.builder()
+                .name(brandCreateDTO.getName())
+                .logoUrl(brandCreateDTO.getLogoUrl())
+                .website(brandCreateDTO.getWebsite())
+                .isActive(true) // Mặc định là hoạt động
+                .build();
 
         Brand savedBrand = brandRepository.save(brand);
         log.info("Đã tạo thương hiệu thành công với ID: {}", savedBrand.getId());
-        return savedBrand;
+        return toBrandResponseDTO(savedBrand);
     }
 
     // Cập nhật thương hiệu
-    public Brand updateBrand(Long id, Brand brandDetails) {
+    public BrandResponseDTO updateBrand(Long id, BrandUpdateDTO brandUpdateDTO) {
         log.info("Cập nhật thương hiệu ID: {}", id);
 
         Brand existingBrand = getBrandById(id);
 
-        // Validate dữ liệu đầu vào
-        validateBrandData(brandDetails);
-
         // Kiểm tra tên thương hiệu (nếu thay đổi)
-        String newName = brandDetails.getName().trim();
+        String newName = brandUpdateDTO.getName().trim();
         if (!existingBrand.getName().equals(newName) && brandRepository.existsByName(newName)) {
             throw new RuntimeException("Tên thương hiệu '" + newName + "' đã tồn tại");
         }
 
         // Cập nhật thông tin
         existingBrand.setName(newName);
-        if (brandDetails.getCountry() != null) {
-            existingBrand.setCountry(brandDetails.getCountry().trim());
+        if (brandUpdateDTO.getLogoUrl() != null) {
+            existingBrand.setLogoUrl(brandUpdateDTO.getLogoUrl().trim());
         }
-        if (brandDetails.getWebsite() != null) {
-            existingBrand.setWebsite(brandDetails.getWebsite().trim());
+        if (brandUpdateDTO.getWebsite() != null) {
+            existingBrand.setWebsite(brandUpdateDTO.getWebsite().trim());
         }
 
         Brand savedBrand = brandRepository.save(existingBrand);
         log.info("Đã cập nhật thương hiệu thành công");
-        return savedBrand;
+        return toBrandResponseDTO(savedBrand);
     }
 
     // Lấy thương hiệu theo ID
@@ -92,27 +88,17 @@ public class BrandService {
 
     // Lấy thương hiệu có phân trang
     @Transactional(readOnly = true)
-    public Page<Brand> getAllBrands(int page, int size, String sortBy, String sortDir) {
-        Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
-        Pageable pageable = PageRequest.of(page, size, sort);
+    public Page<Brand> getAllBrands(Pageable pageable) {
         return brandRepository.findAll(pageable);
-    }
-
-    // Tìm kiếm thương hiệu
-    @Transactional(readOnly = true)
-    public Page<Brand> searchBrands(String keyword, int page, int size) {
-        if (!StringUtils.hasText(keyword)) {
-            return getAllBrands(page, size, "name", "asc");
-        }
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
-        return brandRepository.findByNameOrCodeContainingIgnoreCase(keyword.trim(), pageable);
     }
 
     // Lấy thương hiệu có sản phẩm
     @Transactional(readOnly = true)
-    public List<Brand> getBrandsWithProducts() {
-        return brandRepository.findBrandsWithProducts();
+    public List<BrandResponseDTO> getBrandsWithProducts() {
+        List<Brand> brands = brandRepository.findBrandsWithProducts();
+        return brands.stream()
+                .map(this::toBrandResponseDTO)
+                .toList();
     }
 
     // Lấy thương hiệu phổ biến nhất
@@ -159,34 +145,53 @@ public class BrandService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thương hiệu với tên: " + name));
     }
 
-    // Lấy thương hiệu theo quốc gia
-    @Transactional(readOnly = true)
-    public List<Brand> getBrandsByCountry(String country) {
-        if (!StringUtils.hasText(country)) {
-            throw new RuntimeException("Tên quốc gia không được để trống");
+
+    public BrandResponseDTO toBrandResponseDTO(Brand brand) {
+        if (brand == null) {
+            return null;
         }
-        return brandRepository.findByCountryIgnoreCase(country.trim());
+
+
+
+        return BrandResponseDTO.builder()
+                .id(brand.getId())
+                .name(brand.getName())
+                .logoUrl(brand.getLogoUrl())
+                .website(brand.getWebsite())
+                .isActive(brand.getIsActive())
+                .createdAt(brand.getCreatedAt())
+                .updatedAt(brand.getUpdatedAt())
+                // Thêm thông tin thống kê nếu cần
+//                .productCount(brand.getProducts() != null ? (long) brand.getProducts().size() : 0)
+//                .modelCount(brand.getModels() != null ? (long) brand.getModels().size() : 0)
+                .build();
     }
 
-    // Private method để validate dữ liệu
-    private void validateBrandData(Brand brand) {
-        if (brand == null) {
-            throw new RuntimeException("Dữ liệu thương hiệu không được null");
-        }
+    public void activateBrand(@Min(1) Long id) {
+        log.info("Kích hoạt thương hiệu ID: {}", id);
+        Brand brand = getBrandById(id);
+        brand.setIsActive(true);
+        brandRepository.save(brand);
+        log.info("Đã kích hoạt thương hiệu thành công");
+    }
 
-        if (!StringUtils.hasText(brand.getName())) {
-            throw new RuntimeException("Tên thương hiệu không được để trống");
-        }
+    public void deactivateBrand(@Min(1) Long id) {
+        log.info("Vô hiệu hóa thương hiệu ID: {}", id);
+        Brand brand = getBrandById(id);
+        brand.setIsActive(false);
+        brandRepository.save(brand);
+        log.info("Đã vô hiệu hóa thương hiệu thành công");
+    }
 
-        if (brand.getName().trim().length() > 255) {
-            throw new RuntimeException("Tên thương hiệu không được vượt quá 255 ký tự");
-        }
+    public List<Brand> getActiveBrands() {
+        log.info("Lấy danh sách thương hiệu đang hoạt động");
+        return brandRepository.findByIsActiveTrue(Sort.by(Sort.Direction.ASC, "name"));
+    }
 
-        if (brand.getWebsite() != null && !brand.getWebsite().trim().isEmpty()) {
-            String website = brand.getWebsite().trim();
-            if (!website.startsWith("http://") && !website.startsWith("https://")) {
-                throw new RuntimeException("Website phải bắt đầu bằng http:// hoặc https://");
-            }
-        }
+    public List<Brand> getInactiveBrands() {
+        log.info("Lấy danh sách thương hiệu không hoạt động");
+        return brandRepository.findAll(Sort.by(Sort.Direction.ASC, "name")).stream()
+                .filter(brand -> !brand.getIsActive())
+                .toList();
     }
 }

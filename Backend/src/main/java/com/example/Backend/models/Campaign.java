@@ -4,16 +4,13 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
 @Entity
@@ -65,6 +62,7 @@ public class Campaign {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Getter
     public enum CampaignType {
         EMAIL("email"),
         SMS("sms"),
@@ -78,11 +76,9 @@ public class Campaign {
             this.value = value;
         }
 
-        public String getValue() {
-            return value;
-        }
     }
 
+    @Getter
     public enum CampaignStatus {
         DRAFT("draft"),
         ACTIVE("active"),
@@ -96,9 +92,6 @@ public class Campaign {
             this.value = value;
         }
 
-        public String getValue() {
-            return value;
-        }
     }
 
     // Business logic methods

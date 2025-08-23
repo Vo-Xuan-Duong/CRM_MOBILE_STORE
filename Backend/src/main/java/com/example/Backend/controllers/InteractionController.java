@@ -18,7 +18,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -150,95 +149,49 @@ public class InteractionController {
                 .build());
     }
 
-    @GetMapping("/overdue-follow-ups")
-    @PreAuthorize("hasAuthority('CUSTOMER_READ')")
-    @Operation(summary = "Get overdue follow-up interactions")
-    public ResponseEntity<ResponseData<List<InteractionResponse>>> getOverdueFollowUps() {
-        List<InteractionResponse> response = interactionService.getOverdueFollowUps();
-        return ResponseEntity.ok(ResponseData.<List<InteractionResponse>>builder()
-                .status(HttpStatus.OK.value())
-                .message("Overdue follow-up interactions retrieved successfully")
-                .data(response)
-                .build());
-    }
+    // ==================== STATUS MANAGEMENT APIs ====================
 
-    @PutMapping("/{id}/complete-follow-up")
+    @PutMapping("/{id}/close")
     @PreAuthorize("hasAuthority('CUSTOMER_UPDATE')")
-    @Operation(summary = "Mark follow-up as completed")
-    public ResponseEntity<ResponseData<Void>> completeFollowUp(
-            @PathVariable Long id,
-            @RequestParam(required = false) String outcome) {
-        interactionService.completeFollowUp(id, outcome);
+    @Operation(summary = "Close interaction")
+    public ResponseEntity<ResponseData<Void>> closeInteraction(@PathVariable Long id) {
+        interactionService.closeInteraction(id);
         return ResponseEntity.ok(ResponseData.<Void>builder()
                 .status(HttpStatus.OK.value())
-                .message("Follow-up completed successfully")
+                .message("Interaction closed successfully")
                 .build());
     }
 
-    @GetMapping("/search")
-    @PreAuthorize("hasAuthority('CUSTOMER_READ')")
-    @Operation(summary = "Search interactions")
-    public ResponseEntity<ResponseData<Page<InteractionResponse>>> searchInteractions(
-            @RequestParam String keyword,
-            @PageableDefault(size = 20) Pageable pageable) {
-        Page<InteractionResponse> response = interactionService.searchInteractions(keyword, pageable);
-        return ResponseEntity.ok(ResponseData.<Page<InteractionResponse>>builder()
-                .status(HttpStatus.OK.value())
-                .message("Interactions searched successfully")
-                .data(response)
-                .build());
-    }
-
-    @GetMapping("/statistics")
-    @PreAuthorize("hasAuthority('REPORT_VIEW')")
-    @Operation(summary = "Get interaction statistics")
-    public ResponseEntity<ResponseData<InteractionStatistics>> getInteractionStatistics() {
-        InteractionStatistics stats = interactionService.getInteractionStatistics();
-        return ResponseEntity.ok(ResponseData.<InteractionStatistics>builder()
-                .status(HttpStatus.OK.value())
-                .message("Interaction statistics retrieved successfully")
-                .data(stats)
-                .build());
-    }
-
-    @GetMapping("/statistics/by-type")
-    @PreAuthorize("hasAuthority('REPORT_VIEW')")
-    @Operation(summary = "Get interaction statistics by type")
-    public ResponseEntity<ResponseData<List<Object[]>>> getInteractionStatsByType() {
-        List<Object[]> stats = interactionService.getInteractionStatsByType();
-        return ResponseEntity.ok(ResponseData.<List<Object[]>>builder()
-                .status(HttpStatus.OK.value())
-                .message("Interaction statistics by type retrieved successfully")
-                .data(stats)
-                .build());
-    }
-
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('CUSTOMER_DELETE')")
-    @Operation(summary = "Delete interaction")
-    public ResponseEntity<ResponseData<Void>> deleteInteraction(@PathVariable Long id) {
-        interactionService.deleteInteraction(id);
+    @PutMapping("/{id}/reopen")
+    @PreAuthorize("hasAuthority('CUSTOMER_UPDATE')")
+    @Operation(summary = "Reopen interaction")
+    public ResponseEntity<ResponseData<Void>> reopenInteraction(@PathVariable Long id) {
+        interactionService.reopenInteraction(id);
         return ResponseEntity.ok(ResponseData.<Void>builder()
                 .status(HttpStatus.OK.value())
-                .message("Interaction deleted successfully")
+                .message("Interaction reopened successfully")
+                .build());
+    }
+
+    @PutMapping("/{id}/in-progress")
+    @PreAuthorize("hasAuthority('CUSTOMER_UPDATE')")
+    @Operation(summary = "Mark interaction as in progress")
+    public ResponseEntity<ResponseData<Void>> markAsInProgress(@PathVariable Long id) {
+        interactionService.markAsInProgress(id);
+        return ResponseEntity.ok(ResponseData.<Void>builder()
+                .status(HttpStatus.OK.value())
+                .message("Interaction marked as in progress successfully")
                 .build());
     }
 
     private Long getUserIdFromAuth(Authentication authentication) {
-        // Implementation to extract user ID from authentication
-        return 1L; // Placeholder
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    public static class InteractionStatistics {
-        private long totalInteractions;
-        private long callsCount;
-        private long emailsCount;
-        private long smsCount;
-        private long visitsCount;
-        private long complaintsCount;
-        private long pendingFollowUps;
-        private long overdueFollowUps;
+        // Extract user ID from authentication token or principal
+        // For now, returning a placeholder - this should be implemented based on your security setup
+        if (authentication != null && authentication.getPrincipal() != null) {
+            // Implementation depends on your security configuration
+            // Example: return ((UserPrincipal) authentication.getPrincipal()).getId();
+            // You can implement this based on your UserDetailsService or JWT token structure
+        }
+        return 1L; // Placeholder - should be replaced with actual user ID extraction
     }
 }

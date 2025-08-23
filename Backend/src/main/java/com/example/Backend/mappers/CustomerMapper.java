@@ -4,13 +4,25 @@ import com.example.Backend.dtos.customer.CustomerCreateDTO;
 import com.example.Backend.dtos.customer.CustomerResponseDTO;
 import com.example.Backend.dtos.customer.CustomerUpdateDTO;
 import com.example.Backend.models.Customer;
+import com.example.Backend.repositorys.SalesOrderRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+
 @Component
+@RequiredArgsConstructor
 public class CustomerMapper {
+
+    private final SalesOrderRepository salesOrderRepository;
 
     public CustomerResponseDTO toResponseDTO(Customer customer) {
         if (customer == null) return null;
+
+        // Calculate customer order statistics with null safety
+        Long totalOrders = salesOrderRepository.countCompletedOrdersByCustomer(customer.getId());
+        BigDecimal totalSpent = salesOrderRepository.getTotalSpentByCustomer(customer.getId());
+        var lastOrderDate = salesOrderRepository.getLastOrderDateByCustomer(customer.getId());
 
         return CustomerResponseDTO.builder()
                 .id(customer.getId())
@@ -19,19 +31,15 @@ public class CustomerMapper {
                 .email(customer.getEmail())
                 .birthDate(customer.getBirthDate())
                 .gender(customer.getGender())
-                .addressLine(customer.getAddressLine())
-                .ward(customer.getWard())
-                .district(customer.getDistrict())
-                .city(customer.getCity())
-                .province(customer.getProvince())
+                .tier(customer.getTier())
                 .fullAddress(buildFullAddress(customer))
-                .note(customer.getNote())
+                .note(customer.getNotes())
                 .createdAt(customer.getCreatedAt())
                 .updatedAt(customer.getUpdatedAt())
-                // TODO: Thêm thống kê đơn hàng từ OrderService khi có
-                .totalOrders(0)
-                .totalSpent(0.0)
-                .lastOrderDate(null)
+                // Order statistics with proper null handling
+                .totalOrders(totalOrders != null ? totalOrders.intValue() : 0)
+                .totalSpent(totalSpent != null ? totalSpent.doubleValue() : 0.0)
+                .lastOrderDate(lastOrderDate.orElse(null))
                 .build();
     }
 
@@ -44,12 +52,8 @@ public class CustomerMapper {
                 .email(createDTO.getEmail())
                 .birthDate(createDTO.getBirthDate())
                 .gender(createDTO.getGender())
-                .addressLine(createDTO.getAddressLine())
-                .ward(createDTO.getWard())
-                .district(createDTO.getDistrict())
-                .city(createDTO.getCity())
-                .province(createDTO.getProvince())
-                .note(createDTO.getNote())
+                .address(sanitizeAddress(createDTO.getAddress()))
+                .notes(createDTO.getNote())
                 .build();
     }
 
@@ -71,53 +75,31 @@ public class CustomerMapper {
         if (updateDTO.getGender() != null) {
             customer.setGender(updateDTO.getGender());
         }
-        if (updateDTO.getAddressLine() != null) {
-            customer.setAddressLine(updateDTO.getAddressLine());
+
+        // Update address if provided
+        if (updateDTO.getAddress() != null) {
+            customer.setAddress(sanitizeAddress(updateDTO.getAddress()));
         }
-        if (updateDTO.getWard() != null) {
-            customer.setWard(updateDTO.getWard());
-        }
-        if (updateDTO.getDistrict() != null) {
-            customer.setDistrict(updateDTO.getDistrict());
-        }
-        if (updateDTO.getCity() != null) {
-            customer.setCity(updateDTO.getCity());
-        }
-        if (updateDTO.getProvince() != null) {
-            customer.setProvince(updateDTO.getProvince());
-        }
+
         if (updateDTO.getNote() != null) {
-            customer.setNote(updateDTO.getNote());
+            customer.setNotes(updateDTO.getNote());
         }
     }
 
+    /**
+     * Builds the full address for display purposes
+     * Returns the customer's address or empty string if null/empty
+     */
     private String buildFullAddress(Customer customer) {
-        StringBuilder address = new StringBuilder();
+        return customer.getAddress() != null && !customer.getAddress().trim().isEmpty()
+            ? customer.getAddress().trim()
+            : "";
+    }
 
-        if (customer.getAddressLine() != null && !customer.getAddressLine().trim().isEmpty()) {
-            address.append(customer.getAddressLine());
-        }
-
-        if (customer.getWard() != null && !customer.getWard().trim().isEmpty()) {
-            if (address.length() > 0) address.append(", ");
-            address.append(customer.getWard());
-        }
-
-        if (customer.getDistrict() != null && !customer.getDistrict().trim().isEmpty()) {
-            if (address.length() > 0) address.append(", ");
-            address.append(customer.getDistrict());
-        }
-
-        if (customer.getCity() != null && !customer.getCity().trim().isEmpty()) {
-            if (address.length() > 0) address.append(", ");
-            address.append(customer.getCity());
-        }
-
-        if (customer.getProvince() != null && !customer.getProvince().trim().isEmpty()) {
-            if (address.length() > 0) address.append(", ");
-            address.append(customer.getProvince());
-        }
-
-        return address.toString();
+    /**
+     * Sanitizes address input by trimming whitespace and handling null values
+     */
+    private String sanitizeAddress(String address) {
+        return address != null ? address.trim() : null;
     }
 }

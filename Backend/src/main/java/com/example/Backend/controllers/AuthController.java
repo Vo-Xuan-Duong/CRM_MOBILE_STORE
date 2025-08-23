@@ -1,11 +1,11 @@
 package com.example.Backend.controllers;
 
 import com.example.Backend.dtos.ResponseData;
-import com.example.Backend.dtos.auth.ChangePasswordRequest;
-import com.example.Backend.dtos.auth.ForgotPasswordRequest;
-import com.example.Backend.dtos.auth.LoginRequest;
-import com.example.Backend.dtos.auth.RegisterRequest;
+import com.example.Backend.dtos.auth.*;
+import com.example.Backend.dtos.user.UserResponse;
+import com.example.Backend.models.User;
 import com.example.Backend.services.AuthService;
+import com.example.Backend.services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,11 +20,12 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
-@Slf4j
 @Tag(name = "Authentication", description = "API xác thực và phân quyền")
+@Slf4j
 public class AuthController {
 
     private final AuthService authService;
+    private final UserService userService;
 
     @PostMapping("/login")
     @Operation(summary = "Đăng nhập hệ thống", description = "Đăng nhập cho nhân viên cửa hàng điện thoại")
@@ -61,15 +62,14 @@ public class AuthController {
         try {
             log.info("Attempting registration for user: {}", registerRequest.getUsername());
 
-            Object registrationData = authService.registerHandler(registerRequest);
+            authService.registerHandler(registerRequest);
 
             log.info("Registration successful for user: {}", registerRequest.getUsername());
 
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ResponseData.builder()
                             .status(HttpStatus.CREATED.value())
-                            .message("Đăng ký tài khoản thành công")
-                            .data(registrationData)
+                            .message("Đăng ký tài khoản thành công , vui lòng xác thực otp để kich hoạt tài khoản")
                             .build());
 
         } catch (Exception e) {
@@ -115,19 +115,11 @@ public class AuthController {
 
     @PostMapping("/change-password")
     @Operation(summary = "Đổi mật khẩu", description = "Thay đổi mật khẩu tài khoản")
-    public ResponseEntity<ResponseData<?>> changePassword(
-            @Valid @RequestBody ChangePasswordRequest changePasswordRequest,
-            Authentication authentication) {
+    public ResponseEntity<ResponseData<?>> changePassword( HttpServletRequest request,
+            @Valid @RequestBody ChangePasswordRequest changePasswordRequest) {
         try {
-            String username = authentication.getName();
-            log.info("Attempting password change for user: {}", username);
 
-            boolean isChanged = authService.changePasswordHandler(
-                    changePasswordRequest.getOldPassword(),
-                    changePasswordRequest.getNewPassword()
-            );
-
-            log.info("Password changed successfully for user: {}", username);
+            boolean isChanged = authService.changePasswordHandler(changePasswordRequest.getOldPassword(), changePasswordRequest.getNewPassword(), request);
 
             return ResponseEntity.ok(ResponseData.builder()
                     .status(HttpStatus.OK.value())
@@ -136,9 +128,6 @@ public class AuthController {
                     .build());
 
         } catch (Exception e) {
-            String username = authentication != null ? authentication.getName() : "unknown";
-            log.error("Password change failed for user: {}, error: {}", username, e.getMessage());
-
             return ResponseEntity.badRequest()
                     .body(ResponseData.builder()
                             .status(HttpStatus.BAD_REQUEST.value())
@@ -174,11 +163,28 @@ public class AuthController {
         }
     }
 
+    @PutMapping("/reset-password")
+    @Operation(summary = "Đặt lại mật khẩu", description = "Đặt lại mật khẩu bằng token")
+    public ResponseEntity<ResponseData<?>> resetPassword(@RequestBody ResetPasswordRequest resetPasswordRequest) {
+        try {
+            boolean isReset = authService.resetPasswordHandler(resetPasswordRequest);
+            return ResponseEntity.ok(ResponseData.builder()
+                    .status(HttpStatus.OK.value())
+                    .message("Đặt lại mật khẩu thành công")
+                    .data(isReset)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ResponseData.builder()
+                            .status(HttpStatus.BAD_REQUEST.value())
+                            .message("Đặt lại mật khẩu thất bại: " + e.getMessage())
+                            .build());
+        }
+    }
+
     @PostMapping("/refresh-token")
     @Operation(summary = "Làm mới token", description = "Làm mới JWT token")
-    public ResponseEntity<ResponseData<?>> refreshToken(
-            @RequestParam String refreshToken,
-            HttpServletRequest request) {
+    public ResponseEntity<ResponseData<?>> refreshToken(@RequestParam String refreshToken) {
         try {
             log.info("Attempting token refresh");
 
@@ -203,50 +209,14 @@ public class AuthController {
         }
     }
 
-    @GetMapping("/verify-token")
-    @Operation(summary = "Kiểm tra token", description = "Kiểm tra tính hợp lệ của token")
-    public ResponseEntity<ResponseData<?>> verifyToken(Authentication authentication) {
-        try {
-            if (authentication != null && authentication.isAuthenticated()) {
-                return ResponseEntity.ok(ResponseData.builder()
-                        .status(HttpStatus.OK.value())
-                        .message("Token hợp lệ")
-                        .data(true)
-                        .build());
-            } else {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(ResponseData.builder()
-                                .status(HttpStatus.UNAUTHORIZED.value())
-                                .message("Token không hợp lệ")
-                                .data(false)
-                                .build());
-            }
-        } catch (Exception e) {
-            log.error("Token verification failed, error: {}", e.getMessage());
-
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ResponseData.builder()
-                            .status(HttpStatus.UNAUTHORIZED.value())
-                            .message("Kiểm tra token thất bại: " + e.getMessage())
-                            .data(false)
-                            .build());
-        }
-    }
-
     @GetMapping("/user-info")
     @Operation(summary = "Thông tin người dùng", description = "Lấy thông tin người dùng hiện tại")
-    public ResponseEntity<ResponseData<?>> getCurrentUserInfo(Authentication authentication) {
+    public ResponseEntity<ResponseData<?>> getCurrentUserInfo() {
         try {
-            if (authentication == null || !authentication.isAuthenticated()) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(ResponseData.builder()
-                                .status(HttpStatus.UNAUTHORIZED.value())
-                                .message("Người dùng chưa đăng nhập")
-                                .build());
-            }
 
-            String username = authentication.getName();
-            Object userInfo = authService.getCurrentUserInfo(username);
+            User currentUser = authService.getCurrentUser();
+
+            UserResponse userInfo = userService.getUserByUsername(currentUser.getUsername());
 
             return ResponseEntity.ok(ResponseData.builder()
                     .status(HttpStatus.OK.value())

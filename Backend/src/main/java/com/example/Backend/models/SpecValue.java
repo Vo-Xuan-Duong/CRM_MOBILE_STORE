@@ -1,11 +1,12 @@
 package com.example.Backend.models;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,7 +14,10 @@ import lombok.NoArgsConstructor;
 
 @Data
 @Entity
-@Table(name = "spec_value")
+@Table(name = "spec_value", uniqueConstraints = {
+    @UniqueConstraint(columnNames = {"field_id", "product_model_id"}),
+    @UniqueConstraint(columnNames = {"field_id", "sku_id"})
+})
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -28,65 +32,97 @@ public class SpecValue {
     private SpecField field;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "model_id")
-    private ProductModel model;
+    @JoinColumn(name = "product_model_id")
+    private ProductModel productModel;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sku_id")
     private SKU sku;
 
-    @Column(name = "value_text", columnDefinition = "TEXT")
-    private String valueText;
+    @Column(name = "text_value")
+    private String textValue;
 
-    @Column(name = "value_number", precision = 18, scale = 4)
-    private BigDecimal valueNumber;
+    @Column(name = "number_value")
+    private Long numberValue;
 
-    @Column(name = "value_bool")
-    private Boolean valueBool;
+    @Column(name = "decimal_value")
+    private Double decimalValue;
 
-    @Column(name = "value_json", columnDefinition = "jsonb")
-    private String valueJson;
+    @Column(name = "boolean_value")
+    private Boolean booleanValue;
 
-    @Column(name = "unit_override")
-    private String unitOverride;
+    @Column(name = "date_value")
+    private LocalDateTime dateValue;
+
+    @Column(name = "select_value")
+    private String selectValue;
+
+    @Column(name = "multiselect_value", columnDefinition = "TEXT")
+    private String multiselectValue; // JSON array of selected values
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    // Business logic methods
-    public boolean belongsToModel() {
-        return model != null && sku == null;
-    }
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
 
-    public boolean belongsToSku() {
-        return sku != null && model == null;
-    }
-
+    // Helper methods to get/set values based on field type
     public Object getValue() {
         if (field == null) return null;
 
+        return switch (field.getDataType()) {
+            case TEXT -> textValue;
+            case NUMBER -> numberValue;
+            case DECIMAL -> decimalValue;
+            case BOOLEAN -> booleanValue;
+            case DATE -> dateValue;
+            case SELECT -> selectValue;
+            case MULTISELECT -> multiselectValue;
+        };
+    }
+
+    public void setValue(Object value) {
+        if (field == null) return;
+
+        // Clear all values first
+        clearAllValues();
+
+        // Set the appropriate value based on field type
         switch (field.getDataType()) {
-            case TEXT:
-                return valueText;
-            case NUMBER:
-                return valueNumber;
-            case BOOLEAN:
-                return valueBool;
-            case JSON:
-                return valueJson;
-            default:
-                return null;
+            case TEXT -> textValue = (String) value;
+            case NUMBER -> numberValue = (Long) value;
+            case DECIMAL -> decimalValue = (Double) value;
+            case BOOLEAN -> booleanValue = (Boolean) value;
+            case DATE -> dateValue = (LocalDateTime) value;
+            case SELECT -> selectValue = (String) value;
+            case MULTISELECT -> multiselectValue = (String) value;
         }
     }
 
-    public String getDisplayValue() {
-        Object value = getValue();
-        if (value == null) return "";
+    private void clearAllValues() {
+        textValue = null;
+        numberValue = null;
+        decimalValue = null;
+        booleanValue = null;
+        dateValue = null;
+        selectValue = null;
+        multiselectValue = null;
+    }
 
-        String unit = unitOverride != null ? unitOverride :
-                     (field != null ? field.getUnit() : null);
+    // Validation method
+    public boolean isValidForTarget() {
+        if (field == null) return false;
 
-        return value.toString() + (unit != null ? " " + unit : "");
+        SpecField.AppliesTo appliesTo = field.getAppliesTo();
+        boolean hasProductModel = productModel != null;
+        boolean hasSku = sku != null;
+
+        return switch (appliesTo) {
+            case MODEL -> hasProductModel && !hasSku;
+            case SKU -> !hasProductModel && hasSku;
+            case BOTH -> hasProductModel ^ hasSku; // XOR - exactly one should be set
+        };
     }
 }

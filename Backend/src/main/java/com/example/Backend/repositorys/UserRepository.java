@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -50,8 +51,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     // Cập nhật thời gian đăng nhập cuối
     @Modifying
-    @Query("UPDATE User u SET u.lastLoginAt = :loginTime WHERE u.id = :userId")
-    void updateLastLoginTime(@Param("userId") Long userId, @Param("loginTime") LocalDateTime loginTime);
+    @Query("UPDATE User u SET u.lastLoginAt = :loginTime WHERE u.username = :username")
+    void updateLastLoginTime(@Param("username") String username, @Param("loginTime") LocalDateTime loginTime);
 
     // Đếm số user active
     @Query("SELECT COUNT(u) FROM User u WHERE u.isActive = true")
@@ -66,4 +67,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     // Tìm user theo phone
     Optional<User> findByPhone(String phone);
+
+    long countByIsActiveTrue();
+
+    List<User> findByIsActiveFalse();
 }

@@ -7,10 +7,8 @@
 DROP TABLE IF EXISTS campaign_target CASCADE;
 DROP TABLE IF EXISTS campaign CASCADE;
 DROP TABLE IF EXISTS interaction CASCADE;
-DROP TABLE IF EXISTS invoice CASCADE;
 DROP TABLE IF EXISTS repair_ticket CASCADE;
 DROP TABLE IF EXISTS warranty CASCADE;
-DROP TABLE IF EXISTS installment_plan CASCADE;
 DROP TABLE IF EXISTS payment CASCADE;
 DROP TABLE IF EXISTS sales_order_item CASCADE;
 DROP TABLE IF EXISTS sales_order CASCADE;
@@ -284,14 +282,12 @@ CREATE TABLE stock_movement (
 
 CREATE TABLE sales_order (
     id             BIGSERIAL PRIMARY KEY,
-    order_number   TEXT NOT NULL UNIQUE,
     customer_id    BIGINT NOT NULL REFERENCES customer(id) ON DELETE RESTRICT,
     user_id        BIGINT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     status         TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','pending','confirmed','paid','cancelled','refunded')),
-    payment_method TEXT CHECK (payment_method IN ('cash','card','transfer','installment','other')),
+    payment_method TEXT CHECK (payment_method IN ('cash','card','transfer','other')),
     subtotal       NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (subtotal >= 0),
     discount       NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (discount >= 0),
-    tax_amount     NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (tax_amount >= 0),
     total          NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (total >= 0),
     notes          TEXT,
     order_date     DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -316,27 +312,12 @@ CREATE TABLE payment (
     order_id       BIGINT NOT NULL REFERENCES sales_order(id) ON DELETE CASCADE,
     payment_number TEXT NOT NULL UNIQUE,
     amount         NUMERIC(12,2) NOT NULL CHECK (amount > 0),
-    method         TEXT NOT NULL CHECK (method IN ('cash','card','transfer','installment','other')),
+    method         TEXT NOT NULL CHECK (method IN ('cash','card','transfer','other')),
     reference_no   TEXT,
     status         TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('pending','completed','failed','cancelled')),
     paid_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     notes          TEXT,
     created_by     BIGINT REFERENCES users(id)
-);
-
-CREATE TABLE installment_plan (
-    id                 BIGSERIAL PRIMARY KEY,
-    order_id           BIGINT NOT NULL UNIQUE REFERENCES sales_order(id) ON DELETE CASCADE,
-    provider           TEXT NOT NULL,
-    principal          NUMERIC(12,2) NOT NULL CHECK (principal > 0),
-    down_payment       NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (down_payment >= 0),
-    months             SMALLINT NOT NULL CHECK (months > 0),
-    interest_rate_apr  NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (interest_rate_apr >= 0),
-    monthly_payment    NUMERIC(12,2) NOT NULL CHECK (monthly_payment > 0),
-    next_due_date      DATE,
-    status             TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','completed','defaulted','cancelled')),
-    created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ==============================================
@@ -376,29 +357,6 @@ CREATE TABLE repair_ticket (
     under_warranty BOOLEAN NOT NULL DEFAULT FALSE,
     technician_id  BIGINT REFERENCES users(id),
     closed_at      TIMESTAMPTZ,
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- ==============================================
--- INVOICING
--- ==============================================
-
-CREATE TABLE invoice (
-    id             BIGSERIAL PRIMARY KEY,
-    order_id       BIGINT NOT NULL UNIQUE REFERENCES sales_order(id) ON DELETE CASCADE,
-    invoice_no     TEXT NOT NULL UNIQUE,
-    type           TEXT NOT NULL CHECK (type IN ('vat_invoice','retail_receipt','credit_note')),
-    status         TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','issued','sent','paid','void','cancelled')),
-    issued_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    due_date       DATE,
-    tax_rate       NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (tax_rate >= 0),
-    tax_amount     NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (tax_amount >= 0),
-    subtotal       NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (subtotal >= 0),
-    total_with_tax NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (total_with_tax >= 0),
-    pdf_url        TEXT,
-    notes          TEXT,
-    created_by     BIGINT REFERENCES users(id),
     created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -524,7 +482,6 @@ CREATE TRIGGER trigger_sales_order_updated_at BEFORE UPDATE ON sales_order FOR E
 CREATE TRIGGER trigger_warranty_updated_at BEFORE UPDATE ON warranty FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER trigger_repair_ticket_updated_at BEFORE UPDATE ON repair_ticket FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER trigger_campaign_updated_at BEFORE UPDATE ON campaign FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER trigger_invoice_updated_at BEFORE UPDATE ON invoice FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Function to generate order numbers
 CREATE OR REPLACE FUNCTION generate_order_number()
@@ -596,4 +553,3 @@ INSERT INTO spec_group (name, sort_order) VALUES
 ('Software', 7);
 
 COMMENT ON DATABASE IS 'CRM Mobile Store Database - Enhanced Schema with comprehensive features for mobile retail management';
-

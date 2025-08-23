@@ -5,179 +5,271 @@ import com.example.Backend.dtos.product.SKURequest;
 import com.example.Backend.dtos.product.SKUResponse;
 import com.example.Backend.services.SKUService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/skus")
+@RequestMapping("/api/skus")
 @RequiredArgsConstructor
-@Tag(name = "SKU", description = "SKU Management API")
+@Validated
+@Slf4j
+@Tag(name = "SKU Management", description = "API quản lý SKU sản phẩm")
 public class SKUController {
 
     private final SKUService skuService;
 
     @PostMapping
-    @PreAuthorize("hasAuthority('PRODUCT_CREATE')")
-    @Operation(summary = "Create new SKU")
-    public ResponseEntity<ResponseData<SKUResponse>> createSKU(
-            @Valid @RequestBody SKURequest request) {
-        SKUResponse response = skuService.createSKU(request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ResponseData.<SKUResponse>builder()
-                        .status(HttpStatus.CREATED.value())
-                        .message("SKU created successfully")
-                        .data(response)
-                        .build());
+    @Operation(summary = "Tạo SKU mới", description = "Tạo một SKU sản phẩm mới trong hệ thống")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('PRODUCT_MANAGER')")
+    public ResponseEntity<ResponseData<SKUResponse>> createSKU(@Valid @RequestBody SKURequest sku) {
+        try {
+            log.info("Tạo SKU mới: {}", sku.getCode());
+            SKUResponse createdSKU = skuService.createSKU(sku);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ResponseData.<SKUResponse>builder()
+                            .status(HttpStatus.CREATED.value())
+                            .message("Tạo SKU thành công")
+                            .data(createdSKU)
+                            .build());
+        } catch (Exception e) {
+            log.error("Lỗi tạo SKU: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ResponseData.<SKUResponse>builder()
+                            .status(HttpStatus.BAD_REQUEST.value())
+                            .message("Lỗi tạo SKU: " + e.getMessage())
+                            .build());
+        }
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('PRODUCT_UPDATE')")
-    @Operation(summary = "Update SKU")
+    @Operation(summary = "Cập nhật SKU", description = "Cập nhật thông tin SKU theo ID")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('PRODUCT_MANAGER')")
     public ResponseEntity<ResponseData<SKUResponse>> updateSKU(
-            @PathVariable Long id,
-            @Valid @RequestBody SKURequest request) {
-        SKUResponse response = skuService.updateSKU(id, request);
-        return ResponseEntity.ok(ResponseData.<SKUResponse>builder()
-                .status(HttpStatus.OK.value())
-                .message("SKU updated successfully")
-                .data(response)
-                .build());
+            @Parameter(description = "ID của SKU") @PathVariable @Min(1) Long id,
+            @Valid @RequestBody SKURequest sku) {
+        try {
+            log.info("Cập nhật SKU ID: {}", id);
+            SKUResponse updatedSKU = skuService.updateSKU(id, sku);
+            return ResponseEntity.ok(ResponseData.<SKUResponse>builder()
+                    .status(HttpStatus.OK.value())
+                    .message("Cập nhật SKU thành công")
+                    .data(updatedSKU)
+                    .build());
+        } catch (Exception e) {
+            log.error("Lỗi cập nhật SKU ID {}: {}", id, e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ResponseData.<SKUResponse>builder()
+                            .status(HttpStatus.BAD_REQUEST.value())
+                            .message("Lỗi cập nhật SKU: " + e.getMessage())
+                            .build());
+        }
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('PRODUCT_READ')")
-    @Operation(summary = "Get SKU by ID")
-    public ResponseEntity<ResponseData<SKUResponse>> getSKUById(@PathVariable Long id) {
-        SKUResponse response = skuService.getSKUById(id);
-        return ResponseEntity.ok(ResponseData.<SKUResponse>builder()
-                .status(HttpStatus.OK.value())
-                .message("SKU retrieved successfully")
-                .data(response)
-                .build());
-    }
-
-    @GetMapping("/barcode/{barcode}")
-    @PreAuthorize("hasAuthority('PRODUCT_READ')")
-    @Operation(summary = "Get SKU by barcode")
-    public ResponseEntity<ResponseData<SKUResponse>> getSKUByBarcode(@PathVariable String barcode) {
-        SKUResponse response = skuService.getSKUByBarcode(barcode);
-        return ResponseEntity.ok(ResponseData.<SKUResponse>builder()
-                .status(HttpStatus.OK.value())
-                .message("SKU retrieved successfully")
-                .data(response)
-                .build());
+    @Operation(summary = "Lấy thông tin SKU theo ID", description = "Lấy chi tiết thông tin một SKU")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
+    public ResponseEntity<ResponseData<SKUResponse>> getSKUById(
+            @Parameter(description = "ID của SKU") @PathVariable @Min(1) Long id) {
+        try {
+            SKUResponse sku = skuService.getSKUById(id);
+            return ResponseEntity.ok(ResponseData.<SKUResponse>builder()
+                    .status(HttpStatus.OK.value())
+                    .message("Lấy thông tin SKU thành công")
+                    .data(sku)
+                    .build());
+        } catch (Exception e) {
+            log.error("Không tìm thấy SKU ID: {}", id);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ResponseData.<SKUResponse>builder()
+                            .status(HttpStatus.NOT_FOUND.value())
+                            .message("Không tìm thấy SKU: " + e.getMessage())
+                            .build());
+        }
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('PRODUCT_READ')")
-    @Operation(summary = "Get all SKUs with pagination")
+    @Operation(summary = "Lấy danh sách SKU", description = "Lấy danh sách tất cả SKU với phân trang")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
     public ResponseEntity<ResponseData<Page<SKUResponse>>> getAllSKUs(
-            @PageableDefault(size = 20) Pageable pageable) {
-        Page<SKUResponse> response = skuService.getAllSKUs(pageable);
-        return ResponseEntity.ok(ResponseData.<Page<SKUResponse>>builder()
-                .status(HttpStatus.OK.value())
-                .message("SKUs retrieved successfully")
-                .data(response)
-                .build());
+            @Parameter(description = "Số trang (bắt đầu từ 0)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Kích thước trang") @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "Sắp xếp theo trường") @RequestParam(defaultValue = "code") String sortBy,
+            @Parameter(description = "Hướng sắp xếp") @RequestParam(defaultValue = "asc") String sortDir) {
+        try {
+            Sort sort = sortDir.equalsIgnoreCase("desc") ?
+                Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+            Pageable pageable = PageRequest.of(page, size, sort);
+
+            Page<SKUResponse> skus = skuService.getAllSKUs(pageable);
+            return ResponseEntity.ok(ResponseData.<Page<SKUResponse>>builder()
+                    .status(HttpStatus.OK.value())
+                    .message("Lấy danh sách SKU thành công")
+                    .data(skus)
+                    .build());
+        } catch (Exception e) {
+            log.error("Lỗi lấy danh sách SKU: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ResponseData.<Page<SKUResponse>>builder()
+                            .status(HttpStatus.BAD_REQUEST.value())
+                            .message("Lỗi lấy danh sách SKU: " + e.getMessage())
+                            .build());
+        }
+    }
+
+    @GetMapping("/product-model/{productModelId}")
+    @Operation(summary = "Lấy SKU theo mẫu sản phẩm", description = "Lấy danh sách SKU của một mẫu sản phẩm")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
+    public ResponseEntity<ResponseData<List<SKUResponse>>> getSKUsByProductModel(
+            @Parameter(description = "ID mẫu sản phẩm") @PathVariable Long productModelId) {
+        try {
+            List<SKUResponse> response = skuService.getSKUsByProductModel(productModelId);
+            return ResponseEntity.ok(ResponseData.<List<SKUResponse>>builder()
+                    .status(HttpStatus.OK.value())
+                    .message("Lấy SKU theo mẫu sản phẩm thành công")
+                    .data(response)
+                    .build());
+        } catch (Exception e) {
+            log.error("Lỗi lấy SKU theo mẫu sản phẩm: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ResponseData.<List<SKUResponse>>builder()
+                            .status(HttpStatus.BAD_REQUEST.value())
+                            .message("Lỗi lấy SKU theo mẫu sản phẩm: " + e.getMessage())
+                            .build());
+        }
+    }
+
+    @GetMapping("/barcode/{barcode}")
+    @Operation(summary = "Lấy SKU theo mã barcode", description = "Lấy thông tin SKU theo mã barcode")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
+    public ResponseEntity<ResponseData<SKUResponse>> getSKUByBarcode(
+            @Parameter(description = "Mã barcode của SKU") @PathVariable String barcode) {
+        try {
+            SKUResponse sku = skuService.getSKUByBarcode(barcode);
+            return ResponseEntity.ok(ResponseData.<SKUResponse>builder()
+                    .status(HttpStatus.OK.value())
+                    .message("Lấy SKU theo mã barcode thành công")
+                    .data(sku)
+                    .build());
+        } catch (Exception e) {
+            log.error("Không tìm thấy SKU với barcode: {}", barcode);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ResponseData.<SKUResponse>builder()
+                            .status(HttpStatus.NOT_FOUND.value())
+                            .message("Không tìm thấy SKU với barcode: " + e.getMessage())
+                            .build());
+        }
+    }
+
+    // ==================== ACTIVATE, DEACTIVATE APIs ====================
+
+    @PutMapping("/{id}/activate")
+    @Operation(summary = "Kích hoạt SKU", description = "Kích hoạt SKU đã bị vô hiệu hóa")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('PRODUCT_MANAGER')")
+    public ResponseEntity<ResponseData<Void>> activateSKU(
+            @Parameter(description = "ID của SKU") @PathVariable @Min(1) Long id) {
+        try {
+            log.info("Kích hoạt SKU ID: {}", id);
+            skuService.activateSKU(id);
+            return ResponseEntity.ok(ResponseData.<Void>builder()
+                    .status(HttpStatus.OK.value())
+                    .message("Kích hoạt SKU thành công")
+                    .build());
+        } catch (Exception e) {
+            log.error("Lỗi kích hoạt SKU ID {}: {}", id, e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ResponseData.<Void>builder()
+                            .status(HttpStatus.BAD_REQUEST.value())
+                            .message("Lỗi kích hoạt SKU: " + e.getMessage())
+                            .build());
+        }
+    }
+
+    @PutMapping("/{id}/deactivate")
+    @Operation(summary = "Vô hiệu hóa SKU", description = "Vô hiệu hóa SKU (soft delete)")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('PRODUCT_MANAGER')")
+    public ResponseEntity<ResponseData<Void>> deactivateSKU(
+            @Parameter(description = "ID của SKU") @PathVariable @Min(1) Long id) {
+        try {
+            log.info("Vô hiệu hóa SKU ID: {}", id);
+            skuService.deactivateSKU(id);
+            return ResponseEntity.ok(ResponseData.<Void>builder()
+                    .status(HttpStatus.OK.value())
+                    .message("Vô hiệu hóa SKU thành công")
+                    .build());
+        } catch (Exception e) {
+            log.error("Lỗi vô hiệu hóa SKU ID {}: {}", id, e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ResponseData.<Void>builder()
+                            .status(HttpStatus.BAD_REQUEST.value())
+                            .message("Lỗi vô hiệu hóa SKU: " + e.getMessage())
+                            .build());
+        }
     }
 
     @GetMapping("/search")
-    @PreAuthorize("hasAuthority('PRODUCT_READ')")
-    @Operation(summary = "Search SKUs")
+    @Operation(summary = "Tìm kiếm SKU", description = "Tìm kiếm SKU theo từ khóa với phân trang")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
     public ResponseEntity<ResponseData<Page<SKUResponse>>> searchSKUs(
-            @RequestParam String keyword,
-            @PageableDefault(size = 20) Pageable pageable) {
-        Page<SKUResponse> response = skuService.searchSKUs(keyword, pageable);
-        return ResponseEntity.ok(ResponseData.<Page<SKUResponse>>builder()
-                .status(HttpStatus.OK.value())
-                .message("SKUs searched successfully")
-                .data(response)
-                .build());
-    }
+            @Parameter(description = "Từ khóa tìm kiếm") @RequestParam String keyword,
+            @Parameter(description = "Số trang (bắt đầu từ 0)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Kích thước trang") @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "Sắp xếp theo trường") @RequestParam(defaultValue = "code") String sortBy,
+            @Parameter(description = "Hướng sắp xếp") @RequestParam(defaultValue = "asc") String sortDir) {
+        try {
+            Sort sort = sortDir.equalsIgnoreCase("desc") ?
+                Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+            Pageable pageable = PageRequest.of(page, size, sort);
 
-    @GetMapping("/model/{modelId}")
-    @PreAuthorize("hasAuthority('PRODUCT_READ')")
-    @Operation(summary = "Get SKUs by product model")
-    public ResponseEntity<ResponseData<List<SKUResponse>>> getSKUsByProductModel(
-            @PathVariable Long modelId) {
-        List<SKUResponse> response = skuService.getSKUsByProductModel(modelId);
-        return ResponseEntity.ok(ResponseData.<List<SKUResponse>>builder()
-                .status(HttpStatus.OK.value())
-                .message("SKUs by product model retrieved successfully")
-                .data(response)
-                .build());
-    }
-
-    @GetMapping("/price-range")
-    @PreAuthorize("hasAuthority('PRODUCT_READ')")
-    @Operation(summary = "Get SKUs by price range")
-    public ResponseEntity<ResponseData<List<SKUResponse>>> getSKUsByPriceRange(
-            @RequestParam BigDecimal minPrice,
-            @RequestParam BigDecimal maxPrice) {
-        List<SKUResponse> response = skuService.getSKUsByPriceRange(minPrice, maxPrice);
-        return ResponseEntity.ok(ResponseData.<List<SKUResponse>>builder()
-                .status(HttpStatus.OK.value())
-                .message("SKUs by price range retrieved successfully")
-                .data(response)
-                .build());
+            Page<SKUResponse> skus = skuService.searchSKUs(keyword, pageable);
+            return ResponseEntity.ok(ResponseData.<Page<SKUResponse>>builder()
+                    .status(HttpStatus.OK.value())
+                    .message("Tìm kiếm SKU thành công")
+                    .data(skus)
+                    .build());
+        } catch (Exception e) {
+            log.error("Lỗi tìm kiếm SKU: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ResponseData.<Page<SKUResponse>>builder()
+                            .status(HttpStatus.BAD_REQUEST.value())
+                            .message("Lỗi tìm kiếm SKU: " + e.getMessage())
+                            .build());
+        }
     }
 
     @GetMapping("/brand/{brandId}")
-    @PreAuthorize("hasAuthority('PRODUCT_READ')")
-    @Operation(summary = "Get SKUs by brand")
+    @Operation(summary = "Lấy SKU theo thương hiệu", description = "Lấy danh sách SKU theo thương hiệu")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
     public ResponseEntity<ResponseData<List<SKUResponse>>> getSKUsByBrand(
-            @PathVariable Long brandId) {
-        List<SKUResponse> response = skuService.getSKUsByBrand(brandId);
-        return ResponseEntity.ok(ResponseData.<List<SKUResponse>>builder()
-                .status(HttpStatus.OK.value())
-                .message("SKUs by brand retrieved successfully")
-                .data(response)
-                .build());
-    }
-
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('PRODUCT_DELETE')")
-    @Operation(summary = "Deactivate SKU")
-    public ResponseEntity<ResponseData<Void>> deactivateSKU(@PathVariable Long id) {
-        skuService.deactivateSKU(id);
-        return ResponseEntity.ok(ResponseData.<Void>builder()
-                .status(HttpStatus.OK.value())
-                .message("SKU deactivated successfully")
-                .build());
-    }
-
-    @PutMapping("/{id}/activate")
-    @PreAuthorize("hasAuthority('PRODUCT_UPDATE')")
-    @Operation(summary = "Activate SKU")
-    public ResponseEntity<ResponseData<Void>> activateSKU(@PathVariable Long id) {
-        skuService.activateSKU(id);
-        return ResponseEntity.ok(ResponseData.<Void>builder()
-                .status(HttpStatus.OK.value())
-                .message("SKU activated successfully")
-                .build());
-    }
-
-    @PutMapping("/{id}/price")
-    @PreAuthorize("hasAuthority('PRODUCT_UPDATE')")
-    @Operation(summary = "Update SKU price")
-    public ResponseEntity<ResponseData<Void>> updateSKUPrice(
-            @PathVariable Long id,
-            @RequestParam BigDecimal newPrice) {
-        skuService.updateSKUPrice(id, newPrice);
-        return ResponseEntity.ok(ResponseData.<Void>builder()
-                .status(HttpStatus.OK.value())
-                .message("SKU price updated successfully")
-                .build());
+            @Parameter(description = "ID thương hiệu") @PathVariable Long brandId) {
+        try {
+            List<SKUResponse> response = skuService.getSKUsByBrand(brandId);
+            return ResponseEntity.ok(ResponseData.<List<SKUResponse>>builder()
+                    .status(HttpStatus.OK.value())
+                    .message("Lấy SKU theo thương hiệu thành công")
+                    .data(response)
+                    .build());
+        } catch (Exception e) {
+            log.error("Lỗi lấy SKU theo thương hiệu: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ResponseData.<List<SKUResponse>>builder()
+                            .status(HttpStatus.BAD_REQUEST.value())
+                            .message("Lỗi lấy SKU theo thương hiệu: " + e.getMessage())
+                            .build());
+        }
     }
 }

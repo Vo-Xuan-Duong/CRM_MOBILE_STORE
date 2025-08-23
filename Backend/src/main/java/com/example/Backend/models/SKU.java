@@ -44,7 +44,7 @@ public class SKU {
     private Integer ramGb;
 
     @Column(unique = true)
-    private String barcode;
+    private String code;
 
     @NotNull(message = "Price is required")
     @DecimalMin(value = "0.0", inclusive = true, message = "Price must be non-negative")

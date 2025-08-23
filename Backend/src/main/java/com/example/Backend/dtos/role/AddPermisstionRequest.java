@@ -14,9 +14,6 @@ import java.util.Set;
 @AllArgsConstructor
 public class AddPermisstionRequest {
 
-    @NotNull(message = "Role ID is required")
-    private Long roleId;
-
     @NotNull(message = "At least one permission code is required")
     private Set<String> permissions;
 }

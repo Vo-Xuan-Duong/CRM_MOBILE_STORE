@@ -3,10 +3,10 @@ package com.example.Backend.services;
 import com.example.Backend.dtos.auth.AuthResponse;
 import com.example.Backend.dtos.auth.LoginRequest;
 import com.example.Backend.dtos.auth.RegisterRequest;
-import com.example.Backend.models.RefreshToken;
+import com.example.Backend.dtos.auth.ResetPasswordRequest;
+import com.example.Backend.enums.TokenType;
 import com.example.Backend.models.Role;
 import com.example.Backend.models.User;
-import com.example.Backend.repositorys.RefreshTokenRepository;
 import com.example.Backend.repositorys.RoleRepository;
 import com.example.Backend.repositorys.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,13 +16,15 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -33,10 +35,13 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
-    private final RefreshTokenRepository refreshTokenRepository;
+    private final BlackListService blackListService;
+    private final UserDetailsService userDetailsService;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
+    private final EmailService emailService;
+    private final UserService userService;
 
     public AuthResponse loginHandler(LoginRequest loginRequest) {
         try {
@@ -48,26 +53,19 @@ public class AuthService {
                     )
             );
 
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            UserDetails userDetails = userDetailsService.loadUserByUsername(loginRequest.getUsername());
 
-            // Lấy thông tin user
-            User user = userRepository.findByUsername(loginRequest.getUsername())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
-
-            // Tạo tokens
-            String accessToken = jwtService.generateToken(user);
-            RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
+            String idToken = UUID.randomUUID().toString();
+            String accessToken = jwtService.generateToken(userDetails, idToken, TokenType.ACCESS_TOKEN);
+            String refreshToken = jwtService.generateToken(userDetails, idToken, TokenType.REFRESH_TOKEN);
 
             // Cập nhật last login
-            user.setLastLoginDate(LocalDateTime.now());
-            userRepository.save(user);
+            userService.updateLastLoginTime(loginRequest.getUsername());
 
             return AuthResponse.builder()
                     .accessToken(accessToken)
-                    .refreshToken(refreshToken.getToken())
-                    .tokenType("Bearer")
-                    .expiresIn(jwtService.getJwtExpiration())
-                    .user(user)
+                    .refreshToken(refreshToken)
+                    .user(userService.getUserByUsername(loginRequest.getUsername()))
                     .build();
 
         } catch (Exception e) {
@@ -76,7 +74,7 @@ public class AuthService {
         }
     }
 
-    public AuthResponse registerHandler(RegisterRequest registerRequest) {
+    public void registerHandler(RegisterRequest registerRequest) {
         try {
             // Kiểm tra username đã tồn tại
             if (userRepository.existsByUsername(registerRequest.getUsername())) {
@@ -89,7 +87,7 @@ public class AuthService {
             }
 
             // Lấy role mặc định (EMPLOYEE)
-            Role defaultRole = roleRepository.findByName("EMPLOYEE")
+            Role defaultRole = roleRepository.findByCode("EMPLOYEE")
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy role mặc định"));
 
             // Tạo user mới
@@ -97,29 +95,15 @@ public class AuthService {
                     .username(registerRequest.getUsername())
                     .email(registerRequest.getEmail())
                     .fullName(registerRequest.getFullName())
-                    .phoneNumber(registerRequest.getPhoneNumber())
+                    .phone(registerRequest.getPhone())
                     .password(passwordEncoder.encode(registerRequest.getPassword()))
                     .roles(Set.of(defaultRole))
-                    .isEnabled(true)
-                    .isAccountNonExpired(true)
-                    .isAccountNonLocked(true)
-                    .isCredentialsNonExpired(true)
-                    .createdDate(LocalDateTime.now())
+                    .isActive(false)
                     .build();
 
             User savedUser = userRepository.save(user);
 
-            // Tạo tokens cho user mới
-            String accessToken = jwtService.generateToken(savedUser);
-            RefreshToken refreshToken = refreshTokenService.createRefreshToken(savedUser.getId());
-
-            return AuthResponse.builder()
-                    .accessToken(accessToken)
-                    .refreshToken(refreshToken.getToken())
-                    .tokenType("Bearer")
-                    .expiresIn(jwtService.getJwtExpiration())
-                    .user(savedUser)
-                    .build();
+            // Gửi email xác nhận đăng ký
 
         } catch (Exception e) {
             log.error("Registration failed for user: {}", registerRequest.getUsername(), e);
@@ -127,25 +111,28 @@ public class AuthService {
         }
     }
 
+    public String getTokenFromRequest(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+        return null;
+    }
+
     public boolean logoutHandler(HttpServletRequest request) {
         try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User user = getCurrentUser();
+            if (user != null) {
+                String username = user.getUsername();
 
-            if (authentication != null) {
-                String username = authentication.getName();
+                String token = getTokenFromRequest(request);
 
-                // Lấy token từ header
-                String authHeader = request.getHeader("Authorization");
-                if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                    String token = authHeader.substring(7);
+                blackListService.addTokenToBlackList(token, 60);
 
-                    // Vô hiệu hóa refresh tokens của user
-                    User user = userRepository.findByUsername(username).orElse(null);
-                    if (user != null) {
-                        refreshTokenService.deleteByUserId(user.getId());
-                    }
+                if (username != null) {
+                    refreshTokenService.deleteByUserName(username);
                 }
-
+                log.info("Logout successful for user: {}", username);
                 SecurityContextHolder.clearContext();
                 return true;
             }
@@ -157,29 +144,22 @@ public class AuthService {
         }
     }
 
-    public boolean changePasswordHandler(String oldPassword, String newPassword) {
+    public boolean changePasswordHandler(String oldPassword, String newPassword, HttpServletRequest request) {
         try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication == null) {
-                throw new RuntimeException("Người dùng chưa đăng nhập");
-            }
-
-            String username = authentication.getName();
-            User user = userRepository.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+            User user = getCurrentUser();
 
             // Kiểm tra mật khẩu cũ
             if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
                 throw new RuntimeException("Mật khẩu cũ không đúng");
             }
-
             // Cập nhật mật khẩu mới
             user.setPassword(passwordEncoder.encode(newPassword));
-            user.setPasswordChangedDate(LocalDateTime.now());
+
             userRepository.save(user);
 
-            // Xóa tất cả refresh tokens để buộc đăng nhập lại
-            refreshTokenService.deleteByUserId(user.getId());
+            log.info("Change password successful for user: {}", user.getUsername());
+
+            logoutHandler(request);
 
             return true;
 
@@ -194,12 +174,6 @@ public class AuthService {
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy email trong hệ thống"));
 
-            // Tạo reset token (có thể implement sau)
-            String resetToken = jwtService.generatePasswordResetToken(user);
-
-            // Lưu reset token vào database hoặc cache
-            user.setPasswordResetToken(resetToken);
-            user.setPasswordResetTokenExpiry(LocalDateTime.now().plusHours(1)); // 1 giờ
             userRepository.save(user);
 
             // Gửi email (implement sau)
@@ -215,20 +189,23 @@ public class AuthService {
 
     public AuthResponse refreshTokenHandler(String refreshToken) {
         try {
-            RefreshToken refreshTokenEntity = refreshTokenService.findByToken(refreshToken)
-                    .orElseThrow(() -> new RuntimeException("Refresh token không hợp lệ"));
+            if( refreshToken == null || refreshToken.isEmpty()) {
+                throw new RuntimeException("Refresh token không được để trống");
+            }
+            if(jwtService.verifyToken(refreshToken, TokenType.REFRESH_TOKEN)){
+                throw new RuntimeException("Refresh token không hợp lệ hoặc đã hết hạn");
+            }
 
-            refreshTokenService.verifyExpiration(refreshTokenEntity);
+            String username = jwtService.extractName(refreshToken, TokenType.REFRESH_TOKEN);
 
-            User user = refreshTokenEntity.getUser();
-            String newAccessToken = jwtService.generateToken(user);
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+            String newAccessToken = jwtService.generateToken(userDetails, refreshTokenService.getIdTokenByRefreshToken(refreshToken), TokenType.ACCESS_TOKEN);
 
             return AuthResponse.builder()
                     .accessToken(newAccessToken)
                     .refreshToken(refreshToken)
-                    .tokenType("Bearer")
-                    .expiresIn(jwtService.getJwtExpiration())
-                    .user(user)
+                    .user(userService.getUserByUsername(username))
                     .build();
 
         } catch (Exception e) {
@@ -237,49 +214,21 @@ public class AuthService {
         }
     }
 
-    public Object getCurrentUserInfo(String username) {
+    public boolean resetPasswordHandler(ResetPasswordRequest resetPasswordRequest) {
         try {
-            User user = userRepository.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
-
-            // Trả về thông tin user (không bao gồm password)
-            return User.builder()
-                    .id(user.getId())
-                    .username(user.getUsername())
-                    .email(user.getEmail())
-                    .fullName(user.getFullName())
-                    .phoneNumber(user.getPhoneNumber())
-                    .roles(user.getRoles())
-                    .isEnabled(user.isEnabled())
-                    .lastLoginDate(user.getLastLoginDate())
-                    .createdDate(user.getCreatedDate())
-                    .build();
-
-        } catch (Exception e) {
-            log.error("Get user info failed for username: {}", username, e);
-            throw new RuntimeException("Lấy thông tin người dùng thất bại: " + e.getMessage());
-        }
-    }
-
-    public boolean resetPasswordHandler(String token, String newPassword) {
-        try {
-            User user = userRepository.findByPasswordResetToken(token)
-                    .orElseThrow(() -> new RuntimeException("Token reset không hợp lệ"));
-
-            // Kiểm tra token còn hạn
-            if (user.getPasswordResetTokenExpiry().isBefore(LocalDateTime.now())) {
-                throw new RuntimeException("Token reset đã hết hạn");
-            }
-
+            User user = getCurrentUser();
             // Cập nhật mật khẩu mới
-            user.setPassword(passwordEncoder.encode(newPassword));
-            user.setPasswordResetToken(null);
-            user.setPasswordResetTokenExpiry(null);
-            user.setPasswordChangedDate(LocalDateTime.now());
+            if (resetPasswordRequest.getNewPassword() == null || resetPasswordRequest.getNewPassword().isEmpty()) {
+                throw new RuntimeException("Mật khẩu mới không được để trống");
+            }
+            if (!resetPasswordRequest.isPasswordMatching()) {
+                throw new RuntimeException("Mật khẩu mới và xác nhận mật khẩu không khớp");
+            }
+            user.setPassword(passwordEncoder.encode(resetPasswordRequest.getNewPassword()));
             userRepository.save(user);
 
             // Xóa tất cả refresh tokens
-            refreshTokenService.deleteByUserId(user.getId());
+            refreshTokenService.deleteByUserName(user.getUsername());
 
             return true;
 
@@ -289,14 +238,18 @@ public class AuthService {
         }
     }
 
-    public boolean verifyEmailHandler(String token) {
-        try {
-            // Implement email verification logic
-            // For now, just return true
-            return true;
-        } catch (Exception e) {
-            log.error("Email verification failed", e);
-            throw new RuntimeException("Xác thực email thất bại: " + e.getMessage());
+    public User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new RuntimeException("Người dùng chưa đăng nhập");
         }
+
+        String username = authentication.getName();
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng: " + username));
     }
+
+
+
+
 }

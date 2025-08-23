@@ -17,7 +17,7 @@ public class ProductModelMapper {
                 .brandId(productModel.getBrand().getId())
                 .brandName(productModel.getBrand().getName())
                 .name(productModel.getName())
-                .category(productModel.getCategory().getValue())
+                .category(productModel.getCategory())
                 .defaultWarrantyMonths(productModel.getDefaultWarrantyMonths())
                 .description(productModel.getDescription())
                 .isActive(productModel.getIsActive())

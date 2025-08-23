@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
-public class UserService implements UserDetailsService {
+public class UserService{
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
@@ -47,12 +47,6 @@ public class UserService implements UserDetailsService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        return userRepository.findByUsernameOrEmail(username, username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
-    }
-
     public UserResponse createUser(UserRequest request) {
         validateUserRequest(request);
 
@@ -61,7 +55,7 @@ public class UserService implements UserDetailsService {
                 .email(request.getEmail())
                 .phone(request.getPhone())
                 .username(request.getUsername())
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .password(passwordEncoder.encode(request.getPassword()))
                 .isActive(true)
                 .build();
 
@@ -83,7 +77,7 @@ public class UserService implements UserDetailsService {
         User savedUser = userRepository.save(user);
 
         // Publish event
-        eventPublisher.publishEvent(new UserRegisteredEvent(savedUser));
+//        eventPublisher.publishEvent(new UserRegisteredEvent(savedUser));
 
         return userMapper.toResponse(savedUser);
     }
@@ -109,14 +103,8 @@ public class UserService implements UserDetailsService {
         return userMapper.toResponse(savedUser);
     }
 
-    public void updatePassword(Long id, String newPassword) {
-        User user = findUserById(id);
-        user.setPasswordHash(passwordEncoder.encode(newPassword));
-        userRepository.save(user);
-    }
-
-    public void updateLastLoginTime(Long userId) {
-        userRepository.updateLastLoginTime(userId, LocalDateTime.now());
+    public void updateLastLoginTime(String username) {
+        userRepository.updateLastLoginTime(username, LocalDateTime.now());
     }
 
     public UserResponse getUserById(Long id) {
@@ -124,9 +112,10 @@ public class UserService implements UserDetailsService {
         return userMapper.toResponse(user);
     }
 
-    public Page<UserResponse> getAllUsers(Pageable pageable) {
-        return userRepository.findByIsActiveTrue(pageable)
-                .map(userMapper::toResponse);
+    public List<UserResponse> getAllUsers() {
+        return userRepository.findAll().stream()
+                .map(userMapper::toResponse)
+                .collect(Collectors.toList());
     }
 
     public Page<UserResponse> searchUsers(String search, Pageable pageable) {
@@ -164,7 +153,7 @@ public class UserService implements UserDetailsService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserException("User not found with email: " + email));
 
-        eventPublisher.publishEvent(new PasswordResetRequestedEvent(user));
+//        eventPublisher.publishEvent(new PasswordResetRequestedEvent(user));
     }
 
     public long getActiveUserCount() {
@@ -191,5 +180,51 @@ public class UserService implements UserDetailsService {
         if (request.getEmail() != null && userRepository.existsByEmail(request.getEmail())) {
             throw new UserException("Email already exists: " + request.getEmail());
         }
+    }
+
+    public Page<UserResponse> getUsersPaginated(Pageable pageable) {
+        Page<User> userPage = userRepository.findAll(pageable);
+        return userPage.map(userMapper::toResponse);
+    }
+
+    public UserResponse getUserByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .map(userMapper::toResponse)
+                .orElseThrow(() -> new UserException("User not found with username: " + username));
+    }
+
+    public List<UserResponse> getActiveUsers() {
+        return userRepository.findByIsActiveTrue().stream()
+                .map(userMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<UserResponse> searchUsersByName(String name) {
+        return userRepository.findByFullNameContainingIgnoreCase(name).stream()
+                .map(userMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    public void deleteUser(Long id) {
+        User user = findUserById(id);
+        userRepository.delete(user);
+    }
+
+    public long countActiveUsers() {
+        return userRepository.countByIsActiveTrue();
+    }
+
+    public boolean existsByUsername(String username) {
+        return userRepository.existsByUsername(username);
+    }
+
+    public boolean existsByEmail(String email) {
+        return userRepository.existsByEmail(email);
+    }
+
+    public List<UserResponse> getInactiveUsers() {
+        return userRepository.findByIsActiveFalse().stream()
+                .map(userMapper::toResponse)
+                .collect(Collectors.toList());
     }
 }

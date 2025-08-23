@@ -10,6 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.Getter;
 
 @Data
 @Entity
@@ -56,39 +57,41 @@ public class SpecField {
     @Builder.Default
     private Boolean isRequired = false;
 
+    @Column(name = "is_active", nullable = false)
+    @Builder.Default
+    private Boolean isActive = true;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Getter
     public enum DataType {
         TEXT("text"),
         NUMBER("number"),
+        DECIMAL("decimal"),
         BOOLEAN("boolean"),
-        JSON("json");
+        DATE("date"),
+        SELECT("select"),
+        MULTISELECT("multiselect");
 
         private final String value;
 
         DataType(String value) {
             this.value = value;
         }
-
-        public String getValue() {
-            return value;
-        }
     }
 
+    @Getter
     public enum AppliesTo {
         MODEL("model"),
-        SKU("sku");
+        SKU("sku"),
+        BOTH("both");
 
         private final String value;
 
         AppliesTo(String value) {
             this.value = value;
-        }
-
-        public String getValue() {
-            return value;
         }
     }
 }

@@ -95,21 +95,6 @@ public class PermissionController {
                 .build());
     }
 
-    @GetMapping("/search/name")
-    @Operation(summary = "Search permissions by name")
-    @PreAuthorize("hasAuthority('PERMISSION_VIEW')")
-    public ResponseEntity<ResponseData<List<PermissionResponse>>> searchPermissionsByName(
-            @Parameter(description = "Search term") @RequestParam String name) {
-
-        List<PermissionResponse> permissions = permissionService.searchPermissionsByName(name);
-
-        return ResponseEntity.ok(ResponseData.<List<PermissionResponse>>builder()
-                .status(HttpStatus.OK.value())
-                .message("Permissions matching '" + name + "' retrieved successfully")
-                .data(permissions)
-                .build());
-    }
-
     @GetMapping("/search/code")
     @Operation(summary = "Search permissions by code")
     @PreAuthorize("hasAuthority('PERMISSION_VIEW')")

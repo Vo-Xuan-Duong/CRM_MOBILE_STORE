@@ -8,6 +8,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Data
@@ -33,7 +34,8 @@ public class CampaignTarget {
     private LocalDateTime sentAt;
 
     @Enumerated(EnumType.STRING)
-    private CampaignTargetStatus status;
+    @Builder.Default
+    private CampaignTargetStatus status = CampaignTargetStatus.PENDING;
 
     @Column(columnDefinition = "TEXT")
     private String response;
@@ -42,6 +44,7 @@ public class CampaignTarget {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Getter
     public enum CampaignTargetStatus {
         PENDING("pending"),
         SENT("sent"),
@@ -56,10 +59,6 @@ public class CampaignTarget {
         CampaignTargetStatus(String value) {
             this.value = value;
         }
-
-        public String getValue() {
-            return value;
-        }
     }
 
     // Business logic methods
@@ -71,5 +70,41 @@ public class CampaignTarget {
         return status == CampaignTargetStatus.DELIVERED ||
                status == CampaignTargetStatus.OPENED ||
                status == CampaignTargetStatus.CLICKED;
+    }
+
+    public boolean isFailed() {
+        return status == CampaignTargetStatus.FAILED ||
+               status == CampaignTargetStatus.UNSUBSCRIBED;
+    }
+
+    public boolean isPending() {
+        return status == CampaignTargetStatus.PENDING;
+    }
+
+    public void markAsSent() {
+        this.status = CampaignTargetStatus.SENT;
+        this.sentAt = LocalDateTime.now();
+    }
+
+    public void markAsDelivered() {
+        this.status = CampaignTargetStatus.DELIVERED;
+    }
+
+    public void markAsOpened() {
+        this.status = CampaignTargetStatus.OPENED;
+    }
+
+    public void markAsClicked() {
+        this.status = CampaignTargetStatus.CLICKED;
+    }
+
+    public void markAsFailed(String reason) {
+        this.status = CampaignTargetStatus.FAILED;
+        this.response = reason;
+    }
+
+    public void markAsUnsubscribed() {
+        this.status = CampaignTargetStatus.UNSUBSCRIBED;
+        this.response = "Customer unsubscribed";
     }
 }

@@ -24,5 +24,9 @@ public class SpecFieldResponse {
     private SpecField.AppliesTo appliesTo;
     private Integer sortOrder;
     private Boolean isRequired;
+    private Boolean isActive;
     private LocalDateTime createdAt;
+
+    // Thống kê
+    private Long valueCount;
 }

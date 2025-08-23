@@ -21,19 +21,11 @@ public class CustomerResponseDTO {
     private String email;
     private LocalDate birthDate;
     private Customer.Gender gender;
-
-    // Address fields
-    private String addressLine;
-    private String ward;
-    private String district;
-    private String city;
-    private String province;
-    private String fullAddress; // Địa chỉ đầy đủ được tính toán
-
+    private Customer.CustomerTier tier;
+    private String fullAddress;
     private String note;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-
     // Thống kê khách hàng
     private Integer totalOrders;
     private Double totalSpent;

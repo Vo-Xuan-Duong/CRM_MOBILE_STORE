@@ -21,7 +21,6 @@ public class SerialUnitRequest {
     @NotBlank(message = "IMEI is required")
     private String imei;
 
-    private String serialNumber;
 
     private LocalDate purchaseDate;
 

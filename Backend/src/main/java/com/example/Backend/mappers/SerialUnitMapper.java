@@ -19,7 +19,6 @@ public class SerialUnitMapper {
                         (serialUnit.getSku().getVariantName() != null ? serialUnit.getSku().getVariantName() : ""))
                 .brandName(serialUnit.getSku().getModel().getBrand().getName())
                 .imei(serialUnit.getImei())
-                .serialNumber(serialUnit.getSerialNumber())
                 .status(serialUnit.getStatus())
                 .purchaseDate(serialUnit.getPurchaseDate())
                 .notes(serialUnit.getNotes())
