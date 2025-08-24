@@ -29,7 +29,7 @@ public class RefreshTokenService {
                     () -> new RuntimeException("User not found with username: " + username)
             );
 
-            refreshTokenRepository.deleteByUserId(user.getId());
+            refreshTokenRepository.deleteByUser_Id(user.getId());
 
         } catch (Exception e) {
             log.error("Error deleting refresh tokens for username: {}", username, e);
