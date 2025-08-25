@@ -5,6 +5,7 @@ import com.example.Backend.dtos.auth.LoginRequest;
 import com.example.Backend.dtos.auth.RegisterRequest;
 import com.example.Backend.dtos.auth.ResetPasswordRequest;
 import com.example.Backend.enums.TokenType;
+import com.example.Backend.exceptions.UserException;
 import com.example.Backend.models.Role;
 import com.example.Backend.models.User;
 import com.example.Backend.repositorys.RoleRepository;
@@ -23,8 +24,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -76,19 +79,6 @@ public class AuthService {
 
     public void registerHandler(RegisterRequest registerRequest) {
         try {
-            // Kiểm tra username đã tồn tại
-            if (userRepository.existsByUsername(registerRequest.getUsername())) {
-                throw new RuntimeException("Tên đăng nhập đã tồn tại");
-            }
-
-            // Kiểm tra email đã tồn tại
-            if (userRepository.existsByEmail(registerRequest.getEmail())) {
-                throw new RuntimeException("Email đã tồn tại");
-            }
-
-            // Lấy role mặc định (EMPLOYEE)
-            Role defaultRole = roleRepository.findByCode("EMPLOYEE")
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy role mặc định"));
 
             // Tạo user mới
             User user = User.builder()
@@ -97,12 +87,16 @@ public class AuthService {
                     .fullName(registerRequest.getFullName())
                     .phone(registerRequest.getPhone())
                     .password(passwordEncoder.encode(registerRequest.getPassword()))
-                    .roles(Set.of(defaultRole))
                     .isActive(false)
                     .build();
 
-            User savedUser = userRepository.save(user);
+            Set<Role> roles = new HashSet<>();
+            Role userRole = roleRepository.findByCode("EMPLOYEE")
+                    .orElseThrow(() -> new RuntimeException("Vai trò USER không tồn tại trong hệ thống"));
+            roles.add(userRole);
+            user.setRoles(roles);
 
+            User savedUser = userRepository.save(user);
             // Gửi email xác nhận đăng ký
 
         } catch (Exception e) {
