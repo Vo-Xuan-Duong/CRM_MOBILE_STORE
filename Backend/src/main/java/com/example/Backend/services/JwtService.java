@@ -4,6 +4,7 @@ import com.example.Backend.enums.TokenType;
 import com.example.Backend.models.RefreshToken;
 import com.example.Backend.models.User;
 import com.example.Backend.repositorys.RefreshTokenRepository;
+import com.example.Backend.repositorys.UserRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -33,6 +34,7 @@ public class JwtService {
     private String ISSUER;
 
     private final RefreshTokenRepository refreshTokenRepository;
+    private final UserRepository userRepository;
 
     public String generateToken(UserDetails userDetails, String tokenId, TokenType tokenType) {
         String token = Jwts.builder()
@@ -46,9 +48,16 @@ public class JwtService {
                 .compact();
 
         if(tokenType == TokenType.REFRESH_TOKEN) {
+
+            User user = userRepository.findByUsername(userDetails.getUsername())
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
             RefreshToken refreshToken = RefreshToken.builder()
                     .id(tokenId)
                     .refreshToken(token)
+                    .user(user)
+                    .createAt(LocalDateTime.now())
+                    .updateAt(LocalDateTime.now())
                     .build();
             refreshTokenRepository.save(refreshToken);
         }
@@ -67,9 +76,9 @@ public class JwtService {
 
     private SecretKey getSecretKey(TokenType tokenType) {
         if (tokenType == TokenType.ACCESS_TOKEN) {
-            return Keys.hmacShaKeyFor(SECRET_ACCESS.getBytes(StandardCharsets.UTF_8));
+            return Keys.hmacShaKeyFor(SECRET_ACCESS.getBytes());
         } else if (tokenType == TokenType.REFRESH_TOKEN) {
-            return Keys.hmacShaKeyFor(SECRET_REFRESH.getBytes(StandardCharsets.UTF_8));
+            return Keys.hmacShaKeyFor(SECRET_REFRESH.getBytes());
         }
         throw new IllegalArgumentException("Invalid token type");
     }
