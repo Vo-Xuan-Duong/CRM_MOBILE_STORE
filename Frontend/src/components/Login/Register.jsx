@@ -2,18 +2,20 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Lock, Mail, User, Phone } from 'lucide-react';
 import './Register.css';
+import { registerUser } from '../../api/user';
 
 const Register = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
-    agreeTerms: false
+    fullName: "",
+    email: "",
+    phone: "",
+    username: "",
+    password: "",
+    confirmPassword: ""
   });
 
   const handleInputChange = (e) => {
@@ -24,19 +26,61 @@ const Register = () => {
     });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!formData.fullName || !formData.email || !formData.phone || !formData.password) {
+      alert('Vui lòng điền đầy đủ thông tin bắt buộc!');
+      return;
+    }
     if (formData.password !== formData.confirmPassword) {
       alert('Mật khẩu xác nhận không khớp!');
       return;
     }
-    
-    if (!formData.agreeTerms) {
-      alert('Vui lòng đồng ý với điều khoản sử dụng!');
-      return;
-    }
 
-    console.log('Đăng ký với:', formData);
-    alert('Đăng ký thành công!');
+    const username = formData.username?.trim() || (formData.email.split('@')[0] || "").trim();
+
+    const payload = {
+      fullName: formData.fullName.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone.trim(),
+      username,
+      password: formData.password,
+    };
+
+    setLoading(true);
+    try {
+      console.log("Registering user with payload:", payload);
+      const res = await registerUser(payload);
+      console.log("Registration response:", res);
+      alert("Đăng ký thành công!");
+      navigate("/login");
+    } catch (err) {
+      // lấy message từ backend hoặc axios
+      const rawMsg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Đăng ký thất bại";
+
+      let uiMsg = rawMsg;
+
+      // kiểm tra cụm từ backend trả về
+      if (/Key \(email\).+already exists/i.test(rawMsg)) {
+        uiMsg = "Email đã tồn tại. Vui lòng dùng email khác.";
+      } else if (/Key \(username\).+already exists/i.test(rawMsg)) {
+        uiMsg = "Tên đăng nhập đã tồn tại. Vui lòng chọn tên khác.";
+      }
+
+      alert(uiMsg);
+
+      // focus vào email nếu bị trùng
+      if (/email.+already exists/i.test(rawMsg)) {
+        const emailInput = document.querySelector('input[name="email"]');
+        emailInput?.focus();
+      }
+
+      console.error("Register error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -146,36 +190,14 @@ const Register = () => {
             </button>
           </div>
 
-          <div className="checkbox-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                name="agreeTerms"
-                checked={formData.agreeTerms}
-                onChange={handleInputChange}
-                className="checkbox-input"
-              />
-              <span className="checkbox-custom"></span>
-              <span className="checkbox-text">
-                Tôi đồng ý với{' '}
-                <a href="#" className="terms-link">Điều khoản sử dụng</a>
-                {' '}và{' '}
-                <a href="#" className="terms-link">Chính sách bảo mật</a>
-              </span>
-            </label>
-          </div>
-
           <button
             type="button"
             onClick={handleSubmit}
             className="register-submit-btn"
+            disabled={loading}
           >
-            Đăng Ký
+            {loading ? "Đang đăng ký..." : "Đăng Ký"}
           </button>
-
-          <div className="divider">
-            <span className="divider-text">hoặc đăng ký với</span>
-          </div>
 
           <div className="social-register">
             <button type="button" className="social-btn">

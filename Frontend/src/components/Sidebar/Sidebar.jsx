@@ -1,9 +1,10 @@
 import "./Sidebar.css";
 import { FaHome, FaUsers, FaQrcode, FaMoneyBillWave, FaShieldAlt, FaChartBar, FaBox, FaUserCog, FaCog } from "react-icons/fa";
 import { NavLink } from "react-router-dom";
+import { FaScrewdriverWrench } from "react-icons/fa6";
 
 const menuItems = [
-  { title: "Trang chủ", icon: <FaHome />, path: "/" },
+    { title: "Trang chủ", icon: <FaHome />, path: "/", end: true },  
   { title: "Quản lý khách hàng", icon: <FaUsers />, path: "/customers" },
   { title: "Quét mã QR/Barcode", icon: <FaQrcode />, path: "/qr-scan" },
   { title: "Thanh toán", icon: <FaMoneyBillWave />, path: "/payment" },
@@ -11,7 +12,9 @@ const menuItems = [
   { title: "Thống kê & báo cáo", icon: <FaChartBar />, path: "/reports" },
   { title: "Sản phẩm", icon: <FaBox />, path: "/products" },
   { title: "Quản lý nhân viên", icon: <FaUserCog />, path: "/staff" },
+ { title: "Quản lý phiếu sửa chữa", icon: <FaScrewdriverWrench />, path: "/repair-tickets" },
   { title: "Cài đặt", icon: <FaCog />, path: "/settings" },
+   
 ];
 
 export default function Sidebar({ isOpen = false }) {
