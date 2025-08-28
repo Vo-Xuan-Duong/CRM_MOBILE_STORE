@@ -1,510 +1,537 @@
-import React, { useState, useEffect } from 'react';
+// src/pages/CustomerManagement/CustomerManagement.jsx
+import React, { useEffect, useState, useMemo } from "react";
 import {
-  Users, UserPlus, QrCode, Search, Edit, Eye, Trash2,
-  Download, Upload, X, ChevronLeft, ChevronRight,
-  Phone, Mail, MapPin, TrendingUp, Star, CheckCircle, XCircle
-} from 'lucide-react';
-import CustomerForm from './CustomerForm/CustomerForm';
-import CustomerDetailModal from './CustomerDetailModal/CustomerDetailModal';
-import './CustomerManagement.css';
+  Users,
+  UserPlus,
+  QrCode,
+  Search,
+  Edit,
+  Eye,
+  Trash2,
+  Download,
+  Upload,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  TrendingUp,
+  Star,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
+
+import CustomerForm from "./CustomerForm/CustomerForm";
+import CustomerDetailModal from "./CustomerDetailModal/CustomerDetailModal";
+import "./CustomerManagement.css";
+
+// === API thật ===
+import {
+  listCustomers,            // GET /api/customers?page=&size=&sort=fullName,asc
+  quickSearchCustomers,     // GET /api/customers/quick-search?keyword=&page=&size=
+  createCustomer,           // POST /api/customers
+  updateCustomer,           // PUT  /api/customers/{id}
+  deactivateCustomer,       // DELETE /api/customers/{id}   (soft delete)
+  activateCustomer,         // PATCH  /api/customers/{id}/activate
+  getCustomerStats,         // GET /api/customers/statistics
+} from "../../api/customerManagement";
+
+import { normalizeCustomerPayload } from "../../utils/customerPayload";
+
+// map field sort UI -> field API
+const mapSortField = (ui) => {
+  switch (ui) {
+    case "name":
+      return "fullName";
+    case "createdAt":
+      return "createdAt";
+    case "totalSpent":
+      return "totalSpent";
+    case "totalOrders":
+      return "totalOrders";
+    default:
+      return "fullName";
+  }
+};
+
+// map item trả về từ API -> item dùng trong UI
+const toUI = (it) => ({
+  id: it.id,
+  name: it.fullName ?? it.name ?? "",
+  email: it.email ?? "",
+  phone: it.phone ?? "",
+  address: it.fullAddress ?? it.address ?? "",
+  company: it.company ?? "",
+  tier: (it.tier ?? "REGULAR").toUpperCase(), // REGULAR | VIP | POTENTIAL...
+  totalOrders: it.totalOrders ?? 0,
+  totalSpent: it.totalSpent ?? 0,
+  createdAt: it.createdAt ?? "",
+  lastPurchase: it.lastOrderDate ?? it.lastPurchase ?? "",
+});
 
 const CustomerManagement = () => {
-  // States chính
-  const [customers, setCustomers] = useState([]);
-  const [filteredCustomers, setFilteredCustomers] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
+  // Data
+  const [rows, setRows] = useState([]);        // dữ liệu trang hiện tại (đã map UI)
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+
+  // Search / filter / sort / paging
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedFilter, setSelectedFilter] = useState("all"); // chưa dùng vì API list là active
+  const [sortBy, setSortBy] = useState("name");
+  const [sortOrder, setSortOrder] = useState("asc");
+  const [currentPage, setCurrentPage] = useState(1); // 1-based
   const [itemsPerPage] = useState(10);
 
-  // Modal states
+  // Modal
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [formMode, setFormMode] = useState('add'); // 'add' or 'edit'
+  const [formMode, setFormMode] = useState("add"); // add | edit
 
-  // UI states
-  const [showFilters, setShowFilters] = useState(false);
+  // UI helpers
   const [selectedCustomers, setSelectedCustomers] = useState([]);
-  const [sortBy, setSortBy] = useState('name');
-  const [sortOrder, setSortOrder] = useState('asc');
+  const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState(null);
 
-  // Dữ liệu mẫu ban đầu
+  // ==== LOAD LIST (server-side) ====
+  const loadCustomers = async () => {
+    setLoading(true);
+    try {
+      const params = {
+        page: Math.max(0, currentPage - 1), // API 0-based
+        size: itemsPerPage,
+        sort: `${mapSortField(sortBy)},${sortOrder}`,
+      };
+
+      const res = searchTerm.trim()
+        ? await quickSearchCustomers({ ...params, keyword: searchTerm.trim() })
+        : await listCustomers(params);
+
+      const pageObj = res?.data?.data ?? res?.data ?? {};
+      const content = pageObj.content ?? pageObj.items ?? [];
+
+      setRows(content.map(toUI));
+      setTotalPages(pageObj.totalPages ?? 1);
+      setTotalItems(pageObj.totalElements ?? content.length);
+    } catch (e) {
+      alert(e?.message || "Không tải được danh sách khách hàng.");
+      setRows([]);
+      setTotalPages(1);
+      setTotalItems(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ==== LOAD STATS ====
+  const loadStats = async () => {
+    try {
+      const res = await getCustomerStats();
+      setStats(res?.data?.data ?? res?.data ?? null);
+    } catch {
+      setStats(null);
+    }
+  };
+
+  // gọi lần đầu & mỗi khi filter/sort/page/search đổi
   useEffect(() => {
-    const sampleCustomers = [
-      {
-        id: 1,
-        name: 'Nguyễn Văn An',
-        email: 'nguyenvanan@email.com',
-        phone: '0912345678',
-        address: '123 Đường ABC, Quận 1, TP.HCM',
-        company: 'Công ty TNHH ABC',
-        dateOfBirth: '1990-05-15',
-        status: 'active',
-        totalOrders: 15,
-        totalSpent: 25000000,
-        lastPurchase: '2024-01-10',
-        createdAt: '2023-06-15',
-        notes: 'Khách hàng VIP, thường mua điện thoại cao cấp'
-      },
-      {
-        id: 2,
-        name: 'Trần Thị Bình',
-        email: 'tranthibinh@email.com',
-        phone: '0987654321',
-        address: '456 Đường XYZ, Quận 3, TP.HCM',
-        company: 'Freelancer',
-        dateOfBirth: '1985-08-20',
-        status: 'active',
-        totalOrders: 8,
-        totalSpent: 12000000,
-        lastPurchase: '2023-12-25',
-        createdAt: '2023-03-10',
-        notes: 'Quan tâm đến phụ kiện điện thoại'
-      },
-      {
-        id: 3,
-        name: 'Lê Văn Cường',
-        email: 'levancuong@email.com',
-        phone: '0901234567',
-        address: '789 Đường DEF, Quận 5, TP.HCM',
-        company: 'Công ty XYZ',
-        dateOfBirth: '1988-12-03',
-        status: 'inactive',
-        totalOrders: 3,
-        totalSpent: 5500000,
-        lastPurchase: '2023-08-15',
-        createdAt: '2023-01-20',
-        notes: 'Chưa mua hàng trong thời gian dài'
-      }
-    ];
-    setCustomers(sampleCustomers);
-    setFilteredCustomers(sampleCustomers);
+    loadCustomers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, itemsPerPage, sortBy, sortOrder, searchTerm]);
+
+  useEffect(() => {
+    loadStats();
   }, []);
 
-  // Tìm kiếm và lọc
-  useEffect(() => {
-    let filtered = [...customers];
-
-    // Tìm kiếm
-    if (searchTerm) {
-      filtered = filtered.filter(customer =>
-        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.phone.includes(searchTerm) ||
-        customer.company.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Lọc theo trạng thái
-    if (selectedFilter !== 'all') {
-      filtered = filtered.filter(customer => customer.status === selectedFilter);
-    }
-
-    // Sắp xếp
-    filtered.sort((a, b) => {
-      let aValue = a[sortBy];
-      let bValue = b[sortBy];
-
-      if (typeof aValue === 'string') {
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
-      }
-
-      if (sortOrder === 'asc') {
-        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-      } else {
-        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
-      }
-    });
-
-    setFilteredCustomers(filtered);
-    setCurrentPage(1);
-  }, [customers, searchTerm, selectedFilter, sortBy, sortOrder]);
-
-  // Pagination
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentCustomers = filteredCustomers.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage);
-
-  // Handlers
+  // ===== CRUD =====
   const handleAddCustomer = () => {
     setSelectedCustomer(null);
-    setFormMode('add');
+    setFormMode("add");
     setIsFormOpen(true);
   };
 
-  const handleEditCustomer = (customer) => {
-    setSelectedCustomer(customer);
-    setFormMode('edit');
+  const handleEditCustomer = (row) => {
+    setSelectedCustomer(row);
+    setFormMode("edit");
     setIsFormOpen(true);
   };
 
-  const handleViewCustomer = (customer) => {
-    setSelectedCustomer(customer);
+  const handleViewCustomer = (row) => {
+    setSelectedCustomer(row);
     setIsDetailOpen(true);
   };
 
-  const handleDeleteCustomer = (customerId) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa khách hàng này?')) {
-      setCustomers(prev => prev.filter(customer => customer.id !== customerId));
-      setSelectedCustomers(prev => prev.filter(id => id !== customerId));
+  const handleDeleteCustomer = async (id) => {
+    if (!window.confirm("Vô hiệu hoá khách hàng này?")) return;
+    try {
+      await deactivateCustomer(id);
+      await loadCustomers();
+      await loadStats();
+      alert("Đã vô hiệu hoá!");
+    } catch (e) {
+      alert(e?.response?.data?.message || e?.message || "Thao tác thất bại");
     }
   };
 
-  const handleSaveCustomer = (customerData) => {
-    if (formMode === 'add') {
-      const newCustomer = {
-        ...customerData,
-        id: Date.now(),
-        status: 'active',
-        totalOrders: 0,
-        totalSpent: 0,
-        lastPurchase: null,
-        createdAt: new Date().toISOString().split('T')[0]
-      };
-      setCustomers(prev => [...prev, newCustomer]);
-    } else {
-      setCustomers(prev => prev.map(customer =>
-        customer.id === customerData.id ? { ...customer, ...customerData } : customer
-      ));
+  const handleSaveCustomer = async (formData) => {
+    try {
+      // chuẩn hoá payload cho backend (fullName, fullAddress, birthDate...)
+      const payload = normalizeCustomerPayload(formData);
+
+      if (formMode === "add") {
+        await createCustomer(payload);
+      } else {
+        await updateCustomer(selectedCustomer.id, payload);
+      }
+
+      setIsFormOpen(false);
+      await loadCustomers();
+      await loadStats();
+    } catch (e) {
+      alert(e?.response?.data?.message || e?.message || "Lưu thất bại");
     }
   };
 
+  // ===== Bulk select =====
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedCustomers(currentCustomers.map(customer => customer.id));
+      setSelectedCustomers(rows.map((r) => r.id));
     } else {
       setSelectedCustomers([]);
     }
   };
-
-  const handleSelectCustomer = (customerId) => {
-    setSelectedCustomers(prev =>
-      prev.includes(customerId)
-        ? prev.filter(id => id !== customerId)
-        : [...prev, customerId]
+  const handleSelectCustomer = (id) => {
+    setSelectedCustomers((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
-
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (selectedCustomers.length === 0) return;
+    if (!window.confirm(`Vô hiệu hoá ${selectedCustomers.length} khách hàng?`))
+      return;
 
-    if (window.confirm(`Bạn có chắc chắn muốn xóa ${selectedCustomers.length} khách hàng đã chọn?`)) {
-      setCustomers(prev => prev.filter(customer => !selectedCustomers.includes(customer.id)));
+    try {
+      await Promise.all(selectedCustomers.map((id) => deactivateCustomer(id)));
       setSelectedCustomers([]);
+      await loadCustomers();
+      await loadStats();
+    } catch (e) {
+      alert(e?.response?.data?.message || e?.message || "Thao tác thất bại");
     }
   };
 
-  const handleExportData = () => {
-    const csvContent = [
-      ['Tên', 'Email', 'Số điện thoại', 'Địa chỉ', 'Công ty', 'Trạng thái', 'Tổng đơn hàng', 'Tổng chi tiêu'],
-      ...filteredCustomers.map(customer => [
-        customer.name,
-        customer.email,
-        customer.phone,
-        customer.address,
-        customer.company,
-        customer.status === 'active' ? 'Hoạt động' : 'Không hoạt động',
-        customer.totalOrders,
-        customer.totalSpent.toLocaleString('vi-VN')
-      ])
-    ].map(row => row.join(',')).join('\n');
+  // ===== helpers =====
+  const formatCurrency = (v) =>
+    new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
+      Number(v || 0)
+    );
 
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `danh-sach-khach-hang-${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-  };
-
-  const handleImportData = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const csv = event.target.result;
-        const lines = csv.split('\n');
-        const headers = lines[0].split(',');
-
-        const importedCustomers = lines.slice(1)
-          .filter(line => line.trim())
-          .map((line, index) => {
-            const values = line.split(',');
-            return {
-              id: Date.now() + index,
-              name: values[0] || '',
-              email: values[1] || '',
-              phone: values[2] || '',
-              address: values[3] || '',
-              company: values[4] || '',
-              status: 'active',
-              totalOrders: 0,
-              totalSpent: 0,
-              lastPurchase: null,
-              createdAt: new Date().toISOString().split('T')[0],
-              notes: ''
-            };
-          });
-
-        setCustomers(prev => [...prev, ...importedCustomers]);
-        alert(`Đã nhập thành công ${importedCustomers.length} khách hàng!`);
-      } catch (error) {
-        alert('Có lỗi xảy ra khi nhập dữ liệu. Vui lòng kiểm tra định dạng file.');
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(amount);
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('vi-VN');
-  };
-
-  const getStatusBadge = (status) => {
-    const isActive = status === 'active';
-    const IconComponent = isActive ? CheckCircle : XCircle;
+  const getStatusBadge = (tier) => {
+    const isVip = String(tier).toUpperCase() === "VIP";
+    const Icon = isVip ? CheckCircle : Star;
     return (
-      <span className={`status-badge ${isActive ? 'active' : 'inactive'}`}>
-        <IconComponent />
-        {isActive ? 'VIP' : 'Thường'}
+      <span className={`status-badge ${isVip ? "active" : "inactive"}`}>
+        <Icon /> {isVip ? "VIP" : "Thường"}
       </span>
     );
   };
 
+  // số dòng hiển thị (để hiển thị “từ … đến … / tổng …”)
+  const pageFirstIdx = useMemo(
+    () => (totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1),
+    [currentPage, itemsPerPage, totalItems]
+  );
+  const pageLastIdx = useMemo(
+    () => Math.min(currentPage * itemsPerPage, totalItems),
+    [currentPage, itemsPerPage, totalItems]
+  );
+
   return (
     <div className="customer-management" id="customer-management-page">
       <div className="customer-header">
+        {/* Title & actions */}
         <div className="header-section" id="customer-title-row">
           <div className="title-group" id="customer-title-group">
             <h1 id="customer-main-title">
               <Users />
               Quản lý khách hàng
             </h1>
-            <p id="customer-count-text">Tổng số: {filteredCustomers.length} khách hàng</p>
+            <p id="customer-count-text">Tổng số: {totalItems} khách hàng</p>
           </div>
+
           <div className="action-buttons" id="customer-action-buttons">
-            <button className="btn btn-success" onClick={() => window.location.href = '/qr-scan'}>
+            <button
+              className="btn btn-success"
+              onClick={() => (window.location.href = "/qr-scan")}
+            >
               <QrCode /> Quét QR
             </button>
+
             <input
               type="file"
               accept=".csv"
-              onChange={handleImportData}
+              onChange={(e) => {
+                // giữ tính năng import CSV cũ nếu bạn muốn
+                // hoặc bỏ hẳn nếu không dùng
+                e.target.value = "";
+                alert("Import CSV tuỳ chọn — dữ liệu chính lấy từ API");
+              }}
               id="import-file"
-              style={{ display: 'none' }}
+              style={{ display: "none" }}
             />
             <label htmlFor="import-file" className="btn btn-secondary" id="import-button">
               <Upload /> Import
             </label>
-            <button className="btn btn-secondary" onClick={handleExportData} id="export-button">
+
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                // export từ rows hiện tại
+                const csv = [
+                  [
+                    "Tên",
+                    "Email",
+                    "SĐT",
+                    "Địa chỉ",
+                    "Hạng",
+                    "Số đơn",
+                    "Chi tiêu",
+                  ],
+                  ...rows.map((c) => [
+                    c.name,
+                    c.email,
+                    c.phone,
+                    c.address,
+                    c.tier,
+                    c.totalOrders,
+                    c.totalSpent,
+                  ]),
+                ]
+                  .map((r) => r.join(","))
+                  .join("\n");
+                const blob = new Blob(["\uFEFF" + csv], {
+                  type: "text/csv;charset=utf-8;",
+                });
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = `customers-page-${currentPage}.csv`;
+                a.click();
+              }}
+              id="export-button"
+            >
               <Download /> Export
             </button>
+
             <button className="btn btn-primary" onClick={handleAddCustomer} id="add-customer-button">
               <UserPlus /> Thêm khách hàng
             </button>
           </div>
         </div>
+
+        {/* Stats */}
         <div className="stats-grid" id="customer-stats-grid">
-          <div className="stats-card" id="total-customers-stat">
+          <div className="stats-card">
             <div className="stats-content">
-              <div className="stats-icon blue" id="total-customers-icon">
+              <div className="stats-icon blue">
                 <Users />
               </div>
-              <div className="stats-info" id="total-customers-text">
-                <h3>{customers.length}</h3>
+              <div className="stats-info">
+                <h3>{stats?.totalActiveCustomers ?? totalItems}</h3>
                 <p>Tổng khách hàng</p>
               </div>
             </div>
           </div>
-          <div className="stats-card" id="active-customers-stat">
+          <div className="stats-card">
             <div className="stats-content">
-              <div className="stats-icon green" id="active-customers-icon">
+              <div className="stats-icon green">
                 <CheckCircle />
               </div>
-              <div className="stats-info" id="active-customers-text">
-                <h3>{customers.filter(c => c.status === 'active').length}</h3>
-                <p>Đang hoạt động</p>
+              <div className="stats-info">
+                <h3>{stats?.vipTierCount ?? "--"}</h3>
+                <p>Khách VIP</p>
               </div>
             </div>
           </div>
-          <div className="stats-card" id="revenue-stat">
+          <div className="stats-card">
             <div className="stats-content">
-              <div className="stats-icon yellow" id="revenue-icon">
+              <div className="stats-icon yellow">
                 <TrendingUp />
               </div>
-              <div className="stats-info" id="revenue-text">
-                <h3>{formatCurrency(customers.reduce((sum, c) => sum + c.totalSpent, 0))}</h3>
-                <p>Doanh thu</p>
+              <div className="stats-info">
+                <h3>
+                  {formatCurrency(rows.reduce((s, c) => s + Number(c.totalSpent || 0), 0))}
+                </h3>
+                <p>Chi tiêu (trang này)</p>
               </div>
             </div>
           </div>
-          <div className="stats-card" id="orders-stat">
+          <div className="stats-card">
             <div className="stats-content">
-              <div className="stats-icon purple" id="orders-icon">
+              <div className="stats-icon purple">
                 <Star />
               </div>
-              <div className="stats-info" id="orders-text">
-                <h3>{customers.reduce((sum, c) => sum + c.totalOrders, 0)}</h3>
-                <p>Đơn hàng</p>
+              <div className="stats-info">
+                <h3>{rows.reduce((s, c) => s + Number(c.totalOrders || 0), 0)}</h3>
+                <p>Đơn hàng (trang này)</p>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Search & filter */}
         <div className="search-filter-section" id="search-filter-section">
           <div className="search-filter-content" id="search-filter-container">
             <div className="search-box" id="search-container">
               <Search id="search-icon" />
               <input
                 type="text"
-                placeholder="Tìm kiếm theo tên, SĐT, email, mã KH..."
+                placeholder="Tìm theo tên, SĐT, email…"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setCurrentPage(1);
+                  setSearchTerm(e.target.value);
+                }}
                 className="search-input"
                 id="customer-search-input"
               />
             </div>
+
             <div className="filter-controls" id="filter-container">
               <select
                 value={selectedFilter}
                 onChange={(e) => setSelectedFilter(e.target.value)}
                 className="select-control"
-                id="status-filter-select"
               >
-                <option value="all">Tất cả trạng thái</option>
-                <option value="active">Hoạt động</option>
-                <option value="inactive">Không hoạt động</option>
+                <option value="all">Tất cả</option>
+                {/* có thể thêm bộ lọc tier nếu backend hỗ trợ */}
               </select>
+
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                onChange={(e) => {
+                  setCurrentPage(1);
+                  setSortBy(e.target.value);
+                }}
                 className="select-control"
-                id="sort-by-select"
               >
                 <option value="name">Tên A-Z</option>
                 <option value="createdAt">Ngày tạo</option>
                 <option value="totalSpent">Chi tiêu</option>
                 <option value="totalOrders">Số đơn</option>
               </select>
+
               <button
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                onClick={() => setSortOrder((o) => (o === "asc" ? "desc" : "asc"))}
                 className="sort-button"
-                title={sortOrder === 'asc' ? 'Tăng dần' : 'Giảm dần'}
-                id="sort-order-button"
+                title={sortOrder === "asc" ? "Tăng dần" : "Giảm dần"}
               >
-                {sortOrder === 'asc' ? '↑' : '↓'}
+                {sortOrder === "asc" ? "↑" : "↓"}
               </button>
             </div>
           </div>
+
+          {selectedCustomers.length > 0 && (
+            <div className="bulk-actions" id="bulk-actions-section">
+              <span className="bulk-actions-text">
+                Đã chọn {selectedCustomers.length} khách hàng
+              </span>
+              <div className="bulk-actions-buttons">
+                <button className="btn btn-danger btn-sm" onClick={handleBulkDelete}>
+                  <Trash2 /> Vô hiệu hoá đã chọn
+                </button>
+                <button
+                  className="btn btn-gray btn-sm"
+                  onClick={() => setSelectedCustomers([])}
+                >
+                  <X /> Bỏ chọn
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-        {selectedCustomers.length > 0 && (
-          <div className="bulk-actions" id="bulk-actions-section">
-            <span className="bulk-actions-text" id="selected-count-text">
-              Đã chọn {selectedCustomers.length} khách hàng
-            </span>
-            <div className="bulk-actions-buttons" id="bulk-action-buttons">
-              <button className="btn btn-danger btn-sm" onClick={handleBulkDelete} id="bulk-delete-button">
-                <Trash2 /> Xóa đã chọn
-              </button>
-              <button className="btn btn-gray btn-sm" onClick={() => setSelectedCustomers([])} id="deselect-all-button">
-                <X /> Bỏ chọn
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
+      {/* Table */}
       <div className="data-table-container" id="customer-table-container">
         <div className="data-table-wrapper" id="customer-table-wrapper">
+          {loading && <div className="alert">Đang tải dữ liệu…</div>}
+
           <table className="data-table" id="customer-table">
-            <thead className="table-header" id="customer-table-header">
-              <tr id="customer-table-header-row">
-                <th id="select-all-header">
+            <thead className="table-header">
+              <tr>
+                <th>
                   <input
                     type="checkbox"
-                    checked={selectedCustomers.length === currentCustomers.length && currentCustomers.length > 0}
+                    checked={rows.length > 0 && selectedCustomers.length === rows.length}
                     onChange={handleSelectAll}
-                    id="select-all-checkbox"
                   />
                 </th>
-                <th id="customer-name-header">Khách hàng</th>
-                <th id="contact-info-header">Liên hệ</th>
-                <th id="stats-header">Thống kê</th>
-                <th id="status-header">Trạng thái</th>
-                <th id="actions-header">Thao tác</th>
+                <th>Khách hàng</th>
+                <th>Liên hệ</th>
+                <th>Thống kê</th>
+                <th>Hạng</th>
+                <th>Thao tác</th>
               </tr>
             </thead>
-            <tbody className="table-body" id="customer-table-body">
-              {currentCustomers.map((customer) => (
-                <tr key={customer.id} id={`customer-row-${customer.id}`}>
-                  <td id={`select-cell-${customer.id}`}>
+
+            <tbody className="table-body">
+              {rows.map((c) => (
+                <tr key={c.id}>
+                  <td>
                     <input
                       type="checkbox"
-                      checked={selectedCustomers.includes(customer.id)}
-                      onChange={() => handleSelectCustomer(customer.id)}
-                      id={`select-customer-${customer.id}`}
+                      checked={selectedCustomers.includes(c.id)}
+                      onChange={() => handleSelectCustomer(c.id)}
                     />
                   </td>
-                  <td id={`customer-info-cell-${customer.id}`}>
-                    <div className="customer-info" id={`customer-info-container-${customer.id}`}>
-                      <div className="customer-avatar" id={`customer-avatar-${customer.id}`}>
-                        {customer.name.charAt(0).toUpperCase()}
+
+                  <td>
+                    <div className="customer-info">
+                      <div className="customer-avatar">
+                        {c.name?.charAt(0)?.toUpperCase() ?? "?"}
                       </div>
-                      <div className="customer-details" id={`customer-text-info-${customer.id}`}>
-                        <h4 id={`customer-name-${customer.id}`}>{customer.name}</h4>
-                        <p id={`customer-id-${customer.id}`}>Mã: KH{String(customer.id).slice(-3).padStart(3, '0')}</p>
+                      <div className="customer-details">
+                        <h4>{c.name}</h4>
+                        <p>Mã: KH{String(c.id).slice(-3).padStart(3, "0")}</p>
                       </div>
                     </div>
                   </td>
-                  <td id={`contact-info-cell-${customer.id}`}>
+
+                  <td>
                     <div className="contact-info">
-                      <div className="primary" id={`customer-phone-${customer.id}`}>{customer.phone}</div>
-                      <div className="secondary" id={`customer-email-${customer.id}`}>{customer.email}</div>
+                      <div className="primary">{c.phone || "-"}</div>
+                      <div className="secondary">{c.email || "-"}</div>
                     </div>
                   </td>
-                  <td id={`stats-cell-${customer.id}`}>
+
+                  <td>
                     <div className="contact-info">
-                      <div className="primary" id={`spending-cell-${customer.id}`}>{formatCurrency(customer.totalSpent)}</div>
-                      <div className="secondary" id={`orders-cell-${customer.id}`}>{customer.totalOrders} đơn hàng</div>
+                      <div className="primary">{formatCurrency(c.totalSpent)}</div>
+                      <div className="secondary">{c.totalOrders} đơn hàng</div>
                     </div>
                   </td>
-                  <td id={`status-cell-${customer.id}`}>
-                    {getStatusBadge(customer.status)}
-                  </td>
-                  <td id={`actions-cell-${customer.id}`}>
-                    <div className="action-buttons-cell" id={`action-buttons-${customer.id}`}>
+
+                  <td>{getStatusBadge(c.tier)}</td>
+
+                  <td>
+                    <div className="action-buttons-cell">
                       <button
-                        onClick={() => handleViewCustomer(customer)}
+                        onClick={() => handleViewCustomer(c)}
                         className="action-btn view"
                         title="Xem chi tiết"
-                        id={`view-button-${customer.id}`}
                       >
                         <Eye />
                       </button>
                       <button
-                        onClick={() => handleEditCustomer(customer)}
+                        onClick={() => handleEditCustomer(c)}
                         className="action-btn edit"
                         title="Chỉnh sửa"
-                        id={`edit-button-${customer.id}`}
                       >
                         <Edit />
                       </button>
                       <button
-                        onClick={() => handleDeleteCustomer(customer.id)}
+                        onClick={() => handleDeleteCustomer(c.id)}
                         className="action-btn delete"
-                        title="Xóa"
-                        id={`delete-button-${customer.id}`}
+                        title="Vô hiệu hoá"
                       >
                         <Trash2 />
                       </button>
@@ -512,64 +539,98 @@ const CustomerManagement = () => {
                   </td>
                 </tr>
               ))}
+
+              {!loading && rows.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="empty">
+                    Không có khách hàng
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
         {totalPages > 1 && (
           <div className="pagination" id="pagination-section">
-            <div className="pagination-info" id="pagination-info">
-              Hiển thị {indexOfFirstItem + 1} đến {Math.min(indexOfLastItem, filteredCustomers.length)} trong tổng số {filteredCustomers.length} khách hàng
+            <div className="pagination-info">
+              Hiển thị {pageFirstIdx}-{pageLastIdx} / {totalItems} khách hàng
             </div>
-            <div className="pagination-controls" id="pagination-controls">
+
+            <div className="pagination-controls">
               <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
                 className="pagination-btn"
-                id="prev-page-button"
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                title="Trang trước"
               >
                 <ChevronLeft />
               </button>
-              <div className="pagination-numbers" id="page-buttons">
-                {[...Array(totalPages)].map((_, index) => (
-                  <button
-                    key={index + 1}
-                    onClick={() => setCurrentPage(index + 1)}
-                    className={`pagination-number ${currentPage === index + 1 ? 'active' : ''}`}
-                    id={`page-button-${index + 1}`}
-                  >
-                    {index + 1}
+
+              <div className="pagination-numbers">
+                {Array.from({ length: Math.min(totalPages, 6) }).map((_, i) => {
+                  const n = i + 1;
+                  return (
+                    <button
+                      key={n}
+                      className={`pagination-number ${n === currentPage ? "active" : ""}`}
+                      onClick={() => setCurrentPage(n)}
+                    >
+                      {n}
+                    </button>
+                  );
+                })}
+                {totalPages > 6 && <span className="page-ellipsis">…</span>}
+                {totalPages > 6 && (
+                  <button className="page-num" onClick={() => setCurrentPage(totalPages)}>
+                    {totalPages}
                   </button>
-                ))}
+                )}
               </div>
+
               <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
                 className="pagination-btn"
-                id="next-page-button"
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                title="Trang sau"
               >
                 <ChevronRight />
               </button>
+
+              <select
+                className="select"
+                value={itemsPerPage}
+                onChange={() => {}}
+                disabled
+                title="Kích thước trang (đặt 10 ở code)"
+                style={{ marginLeft: 8, opacity: 0.6 }}
+              >
+                <option>10/trang</option>
+              </select>
             </div>
           </div>
         )}
       </div>
 
+      {/* Modal Form */}
       <CustomerForm
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         onSave={handleSaveCustomer}
         customer={selectedCustomer}
-        title={formMode === 'add' ? 'Thêm khách hàng mới' : 'Chỉnh sửa khách hàng'}
-        id={formMode === 'add' ? 'add-customer-modal' : 'edit-customer-modal'}
+        title={formMode === "add" ? "Thêm khách hàng mới" : "Chỉnh sửa khách hàng"}
+        id={formMode === "add" ? "add-customer-modal" : "edit-customer-modal"}
       />
 
+      {/* Modal Detail */}
       <CustomerDetailModal
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
         customer={selectedCustomer}
-        onEdit={(customer) => {
+        onEdit={(c) => {
           setIsDetailOpen(false);
-          handleEditCustomer(customer);
+          handleEditCustomer(c);
         }}
         id="customer-detail-modal"
       />

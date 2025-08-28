@@ -65,19 +65,11 @@ const EcommerceDashboard = () => {
       <div className="dash__head">
         <h1 className="dash__title">Trang tổng quan</h1>
         <div className="dash__actions">
-          <button className="btn btn--green">Quét QR</button>
-          <button className="btn">Import</button>
-          <button className="btn">Export</button>
+          <button className="btn btn--primary">Quét QR</button>
+          <button className="btn btn--primary">Import</button>
+          <button className="btn btn--primary">Export</button>
           <button className="btn btn--primary">Thêm khách hàng</button>
         </div>
-      </div>
-
-      {/* KPI cards */}
-      <div className="grid grid--4">
-        <KpiCard icon="👥" label="Tổng khách hàng" value={kpis.customers} />
-        <KpiCard icon="✅" label="Đang hoạt động" value={kpis.activeCustomers} />
-        <KpiCard icon="📈" label="Doanh thu" value={formatVND(kpis.revenueMonth)} />
-        <KpiCard icon="⭐" label="Đơn hàng" value={kpis.orders} />
       </div>
 
       {/* Charts row */}

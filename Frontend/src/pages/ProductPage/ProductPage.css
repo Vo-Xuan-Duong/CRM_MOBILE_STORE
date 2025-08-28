@@ -1,0 +1,228 @@
+/* ========== Variables / Reset ========== */
+:root{
+  --bg:#f7f8fa;
+  --card:#ffffff;
+  --primary:#10b981;
+  --primary-hover:#0ea472;
+  --danger:#ef4444;
+  --danger-700:#b91c1c;
+  --text:#111827;
+  --muted:#6b7280;
+  --border:#e5e7eb;
+  --shadow:0 8px 30px rgba(0,0,0,.06);
+}
+
+*{box-sizing:border-box}
+img{max-width:100%;display:block}
+
+/* ========== Page Layout ========== */
+.pg-root{min-height:100vh;background:var(--bg)}
+.pg-container{max-width:1120px;margin:0 auto;padding:24px 16px}
+
+/* ========== Inputs / Buttons ========== */
+.input{
+  width:100%;height:40px;padding:0 12px;border:1px solid var(--border);
+  border-radius:12px;background:#fff;color:var(--text);outline:none;
+  transition:border .15s, box-shadow .15s;
+}
+.input:focus{border-color:#94d9bf;box-shadow:0 0 0 3px rgba(16,185,129,.15)}
+.input-lg{min-width:420px;border-color:var(--primary)}
+
+.textarea{
+  width:100%;padding:10px 12px;border:1px solid var(--border);
+  border-radius:12px;resize:vertical;outline:none;min-height:96px;
+}
+.textarea:focus{border-color:#94d9bf;box-shadow:0 0 0 3px rgba(16,185,129,.15)}
+
+.select{
+  height:40px;min-width:180px;padding:0 12px;border:1px solid var(--primary);
+  border-radius:12px;background:#fff;color:var(--text);
+}
+
+.btn{
+  height:40px;padding:0 12px;border-radius:12px;border:1px solid var(--border);
+  background:#fff;color:var(--text);cursor:pointer;
+  display:inline-flex;align-items:center;gap:8px;font-weight:600;
+  transition:filter .15s, transform .05s, background .15s, color .15s, border .15s;
+}
+.btn:hover{filter:brightness(1.02)}
+.btn:active{transform:translateY(1px)}
+.btn-with-icon svg{margin-right:6px}
+.btn-primary{background:var(--primary);color:#fff;border-color:transparent}
+.btn-primary:hover{background:var(--primary-hover)}
+.btn-outline{background:#fff}
+.btn-ghost{background:#fff;border-color:transparent}
+.btn-danger{background:#fee2e2;color:var(--danger-700);border-color:#fecaca}
+.btn-icon{width:40px;justify-content:center;padding:0}
+
+/* ========== Toolbar ========== */
+.toolbar{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;margin-bottom:14px;flex-wrap:wrap;
+}
+.toolbar-left{display:flex;align-items:center;gap:12px;flex:1 1 420px}
+.toolbar-right{
+  display:flex;align-items:center;gap:10px;
+  flex:0 0 auto;flex-wrap:wrap;
+}
+
+/* ========== Card / Table ========== */
+.card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:16px;box-shadow:var(--shadow);overflow:hidden;
+}
+
+.table{width:100%;border-collapse:separate;border-spacing:0;min-width:800px}
+.table thead th{
+  background:#f3f4f6;text-align:left;font-size:13px;color:#4b5563;padding:12px
+}
+.table tbody td,.table tbody th{padding:12px;border-top:1px solid var(--border);vertical-align:middle}
+.table .text-right{text-align:right}
+.table tr:hover td{background:#fafafa}
+
+.empty{padding:32px;text-align:center;color:#6b7280}
+
+/* ========== Product row ========== */
+.prod{display:flex;align-items:center;gap:12px}
+.prod__name{font-weight:600;color:var(--text)}
+.thumb{width:40px;height:40px;border-radius:10px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.thumb-empty{display:flex;align-items:center;justify-content:center;width:100%;height:100%}
+.muted{color:var(--muted)}
+.bold{font-weight:700}
+.row-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+
+/* ========== Pagination ========== */
+.pg-pagination{
+  display:flex;align-items:center;gap:8px;justify-content:flex-end;
+  padding:10px 12px;
+}
+.page-btn,.page-num{
+  min-width:36px;height:36px;border-radius:10px;border:1px solid var(--border);
+  background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
+  padding:0 10px;
+}
+.page-num.is-active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.page-ellipsis{color:#6b7280;padding:0 4px}
+
+/* ========== Modal ========== */
+.pg-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:40}
+.pg-modal-wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.pg-modal{
+  width:100%;max-width:680px;background:#fff;border:1px solid var(--border);
+  border-radius:16px;box-shadow:var(--shadow);
+}
+.pg-modal--wide{max-width:900px}
+.pg-modal__header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)}
+.pg-modal__title{margin:0;font-size:18px;font-weight:700}
+.pg-modal__body{padding:16px}
+
+.table-wrap{overflow-x:auto}
+.cell-label{width:200px;text-align:left;padding:12px;font-size:14px;font-weight:600;color:#374151}
+.cell-input{padding:12px}
+.row-alt{background:#fafafa}
+
+/* ========== Grid helpers (desktop) ========== */
+.grid{display:grid}
+.grid-2{grid-template-columns:repeat(2,1fr)}
+.grid-3{grid-template-columns:1fr 2fr}
+.grid-span-2{grid-column:span 2}
+.gap{gap:12px}
+
+.kv .kv__label{font-size:12px;color:#6b7280}
+.kv .kv__value.h1{font-size:20px;font-weight:700;margin-top:2px}
+.meta{font-size:12px;color:#9ca3af;margin-top:2px}
+.stat{background:#f9fafb;border:1px solid var(--border);border-radius:12px;padding:12px}
+.stat__label{font-size:12px;color:#6b7280}
+.stat__value{font-weight:700;color:var(--text)}
+.info{border:1px solid var(--border);border-radius:12px;padding:12px}
+.info__label{font-size:12px;color:#6b7280}
+.info__value{font-weight:600}
+.desc{border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:8px}
+.desc__label{font-size:12px;color:#6b7280;margin-bottom:6px}
+.desc__content{white-space:pre-wrap;line-height:1.6}
+
+.thumb-large{width:100%;aspect-ratio:1 / 1;border-radius:12px;background:#f3f4f6;overflow:hidden}
+.thumb-large img{width:100%;height:100%;object-fit:cover}
+
+/* =========================================================
+   ===============  RESPONSIVE (≤ 1024px)  =================
+   ========================================================= */
+@media (max-width: 1024px){
+  .pg-container{padding:20px 14px}
+  .input-lg{min-width:300px}
+  .table{min-width:720px}
+}
+
+/* =========================================================
+   ===============  RESPONSIVE (≤ 768px)  ==================
+   - Toolbar xếp cột, nút full-width mượt
+   - Bảng chuyển sang Card View (mobile-friendly)
+   - Modal full-screen, form block
+   ========================================================= */
+@media (max-width: 768px){
+  .pg-container{padding:16px 12px}
+
+  .toolbar{gap:10px}
+  .toolbar-left{flex:1 1 100%; order:1}
+  .toolbar-right{flex:1 1 100%; order:2; justify-content:flex-start}
+  .toolbar-right .btn{flex:1 1 calc(50% - 6px)} /* 2 cột nút */
+  .select{min-width:unset;flex:1}
+  .input-lg{min-width:unset;flex:2}
+
+  /* Modal full screen feel */
+  .pg-modal{max-width:100%;height:auto}
+  .pg-modal--wide{max-width:100%}
+  .pg-modal__body{padding:12px}
+
+  /* Form table -> block */
+  .cell-label{width:38%;padding:10px}
+  .cell-input{padding:10px}
+  .input,.textarea,.select,.btn{border-radius:10px}
+
+  /* TABLE -> CARD VIEW */
+  .table{min-width:0}
+  .table thead{display:none}
+  .table tbody tr{
+    display:block;border-top:0;margin:10px 12px;border-radius:14px;
+    border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden;background:#fff;
+  }
+  .table tbody td,.table tbody th{
+    display:flex;align-items:center;gap:10px;border-top:0;border-bottom:1px solid var(--border);
+    padding:12px 14px;
+  }
+  .table tbody tr > *:last-child{border-bottom:0}
+  /* Nhãn cho từng field (sử dụng data-title nếu muốn custom ngoài JSX) */
+  .table tbody td::before,.table tbody th::before{
+    content:attr(data-title);min-width:110px;color:var(--muted);font-size:12px;font-weight:600;
+  }
+  /* Gán nhãn mặc định theo cột (nếu không có data-title) */
+  .table tbody td:nth-child(1)::before{content:'Sản phẩm'}
+  .table tbody td:nth-child(2)::before{content:'SKU'}
+  .table tbody td:nth-child(3)::before{content:'Danh mục'}
+  .table tbody td:nth-child(4)::before{content:'Thương hiệu'}
+  .table tbody td:nth-child(5)::before{content:'Giá'}
+  .table tbody td:nth-child(6)::before{content:'Tồn kho'}
+  .table tbody td:nth-child(7)::before{content:'Thao tác'}
+
+  /* Product row inside card */
+  .prod{gap:10px}
+  .thumb{width:36px;height:36px;border-radius:9px}
+  .row-actions{justify-content:flex-start}
+  .row-actions .btn{height:36px}
+
+  /* Pagination bigger/touchable */
+  .pg-pagination{justify-content:center;padding:12px 8px}
+  .page-btn,.page-num{min-width:40px;height:40px;border-radius:12px}
+}
+
+/* =========================================================
+   ===============  RESPONSIVE (≤ 480px)  ==================
+   ========================================================= */
+@media (max-width: 480px){
+  .toolbar-right .btn{flex:1 1 100%}  /* mỗi hàng 1 nút */
+  .page-btn,.page-num{min-width:44px;height:44px}
+  .thumb{width:34px;height:34px}
+  .prod__name{font-size:14px}
+  .kv .kv__value.h1{font-size:18px}
+}

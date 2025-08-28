@@ -102,85 +102,81 @@ const CustomerForm = ({
     }
   };
 
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="customer-form-overlay">
+      <div className="customer-form-modal">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
+        <div className="form-header">
+          <h2 className="form-title">{title}</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="close-button"
+            type="button"
           >
-            <X className="h-5 w-5 text-gray-500" />
+            <X size={22} />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="form-content form-grid">
           {/* Name */}
-          <div>
-            <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
-              <User className="h-4 w-4 mr-2" />
-              Full Name *
+          <div className="form-group">
+            <label className="form-label">
+              <User size={18} style={{marginRight: 6}} />
+              Full Name <span className="required">*</span>
             </label>
             <input
               type="text"
               name="name"
               value={formData.name}
               onChange={handleInputChange}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                errors.name ? 'border-red-500' : 'border-gray-300'
-              }`}
+              className={`form-input${errors.name ? ' error' : ''}`}
               placeholder="Enter customer's full name"
             />
-            {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+            {errors.name && <span className="error-message">{errors.name}</span>}
           </div>
 
           {/* Email */}
-          <div>
-            <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
-              <Mail className="h-4 w-4 mr-2" />
-              Email Address *
+          <div className="form-group">
+            <label className="form-label">
+              <Mail size={18} style={{marginRight: 6}} />
+              Email Address <span className="required">*</span>
             </label>
             <input
               type="email"
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                errors.email ? 'border-red-500' : 'border-gray-300'
-              }`}
+              className={`form-input${errors.email ? ' error' : ''}`}
               placeholder="Enter email address"
             />
-            {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
+            {errors.email && <span className="error-message">{errors.email}</span>}
           </div>
 
           {/* Phone */}
-          <div>
-            <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
-              <Phone className="h-4 w-4 mr-2" />
-              Phone Number *
+          <div className="form-group">
+            <label className="form-label">
+              <Phone size={18} style={{marginRight: 6}} />
+              Phone Number <span className="required">*</span>
             </label>
             <input
               type="tel"
               name="phone"
               value={formData.phone}
               onChange={handleInputChange}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                errors.phone ? 'border-red-500' : 'border-gray-300'
-              }`}
+              className={`form-input${errors.phone ? ' error' : ''}`}
               placeholder="Enter phone number"
             />
-            {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
+            {errors.phone && <span className="error-message">{errors.phone}</span>}
           </div>
 
           {/* Address */}
-          <div>
-            <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
-              <MapPin className="h-4 w-4 mr-2" />
+          <div className="form-group">
+            <label className="form-label">
+              <MapPin size={18} style={{marginRight: 6}} />
               Address
             </label>
             <textarea
@@ -188,16 +184,16 @@ const CustomerForm = ({
               value={formData.address}
               onChange={handleInputChange}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="form-textarea"
               placeholder="Enter customer's address"
             />
           </div>
 
           {/* Date of Birth & Company */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
-                <Calendar className="h-4 w-4 mr-2" />
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">
+                <Calendar size={18} style={{marginRight: 6}} />
                 Date of Birth
               </label>
               <input
@@ -205,13 +201,13 @@ const CustomerForm = ({
                 name="dateOfBirth"
                 value={formData.dateOfBirth}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="form-input"
               />
             </div>
 
-            <div>
-              <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
-                <Building className="h-4 w-4 mr-2" />
+            <div className="form-group">
+              <label className="form-label">
+                <Building size={18} style={{marginRight: 6}} />
                 Company
               </label>
               <input
@@ -219,41 +215,39 @@ const CustomerForm = ({
                 name="company"
                 value={formData.company}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="form-input"
                 placeholder="Company name"
               />
             </div>
           </div>
 
           {/* Notes */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Notes
-            </label>
+          <div className="form-group">
+            <label className="form-label">Notes</label>
             <textarea
               name="notes"
               value={formData.notes}
               onChange={handleInputChange}
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="form-textarea"
               placeholder="Additional notes about the customer..."
             />
           </div>
 
           {/* Form Actions */}
-          <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200">
+          <div className="form-footer">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              className="form-button secondary"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              className="form-button primary"
             >
-              <Save className="h-4 w-4 mr-2" />
+              <Save size={18} style={{marginRight: 6}} />
               {customer ? 'Update Customer' : 'Add Customer'}
             </button>
           </div>

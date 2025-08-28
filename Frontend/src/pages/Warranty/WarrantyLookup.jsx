@@ -1,33 +1,9 @@
 import React, { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 import "./WarrantyLookup.css";
 
-/** ===== Mock search (thay bằng gọi API thật) ===== */
-const mockSearchWarranty = async ({ imei, phone }) => {
-  await new Promise(r => setTimeout(r, 600)); // giả lập loading
-  if (!imei && !phone) return { ok: false, error: "Vui lòng nhập IMEI hoặc SĐT." };
 
-  // demo dữ liệu
-  const demo = {
-    customer: { name: "Nguyễn Văn An", phone: "0912345678" },
-    device: { productName: "iPhone 15 128GB", imei: "356789012345678", color: "Black", sku: "IP15-128-B" },
-    order: { code: "DH-00125", date: "2025-05-12", price: 23990000 },
-    warranty: {
-      startDate: "2025-05-12",
-      endDate: "2026-05-12",
-      status: "Còn hạn", // "Hết hạn" | "Đang xử lý"
-      history: [
-        { at: "2025-06-22", title: "Tiếp nhận bảo hành", note: "Lỗi loa thoại nhỏ" },
-        { at: "2025-06-24", title: "Hoàn tất bảo hành", note: "Thay loa, vệ sinh máy" }
-      ],
-    },
-  };
-
-  // nếu IMEI/phone khớp thì trả demo, ngược lại “không tìm thấy”
-  const matched = (imei && imei.endsWith("5678")) || (phone && phone.endsWith("678"));
-  if (!matched) return { ok: false, error: "Không tìm thấy bảo hành với thông tin đã nhập." };
-  return { ok: true, data: demo };
-};
 
 const formatVND = (n) =>
   n.toLocaleString("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 });
@@ -38,6 +14,7 @@ const WarrantyLookup = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);   // {ok, data|error}
   const [touched, setTouched] = useState(false);
+    const navigate = useNavigate();
 
   const imeiHint = useMemo(() => {
     if (!touched) return "";
@@ -46,13 +23,25 @@ const WarrantyLookup = () => {
     return "";
   }, [imei, touched]);
 
+
   const onSubmit = async (e) => {
     e.preventDefault();
     setTouched(true);
     setLoading(true);
     setResult(null);
-    const res = await mockSearchWarranty({ imei: imei.trim(), phone: phone.trim() });
-    setResult(res);
+    try {
+      const res = await axios.post("/api/warranty-lookup", {
+        imei: imei.trim(),
+        phone: phone.trim(),
+      });
+      setResult({ ok: true, data: res.data });
+    } catch (err) {
+      let msg = "Lỗi kết nối máy chủ.";
+      if (err.response && err.response.data && err.response.data.error) {
+        msg = err.response.data.error;
+      }
+      setResult({ ok: false, error: msg });
+    }
     setLoading(false);
   };
 
@@ -60,12 +49,16 @@ const WarrantyLookup = () => {
     setImei(""); setPhone(""); setResult(null); setTouched(false);
   };
 
-  return (
+    const handleScanQR = () => {
+      navigate("/qr-scan");
+    };
+
+    return (
     <div className="wl">
       <div className="wl__head">
         <h1 className="wl__title">Tra cứu bảo hành</h1>
         <div className="wl__actions">
-         <button className="btn btn--green" onClick={()=>alert("TODO: mở màn hình quét QR/Barcode")}>
+           <button className="btn btn--green" onClick={handleScanQR}>
   Quét QR / Barcode
 </button>
         </div>

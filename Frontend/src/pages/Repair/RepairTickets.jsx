@@ -16,9 +16,12 @@ import {
   RefreshCcw
 } from "lucide-react";
 import "./RepairTickets.css";
-
-/** ======================= CONFIG ======================= */
-// Adjust if your backend uses a different prefix
+import axios from 'axios';
+const API_BASE = (import.meta?.env?.VITE_API_BASE || 'http://localhost:8080').replace(/\/+$/, '');
+const apiClient = axios.create({
+  baseURL: API_BASE,
+  headers: { 'Content-Type': 'application/json' },
+});
 const API_PREFIX = "/api"; // e.g. "/api", ""
 const TICKETS_PATH = `${API_PREFIX}/repair-tickets`;
 const TECHNICIANS_PATH = `${API_PREFIX}/technicians`;

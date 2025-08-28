@@ -17,6 +17,7 @@ import EcommerManagement from "./pages/EcommerceDashboard/EcommerceDashboard.jsx
 import WarrantyLookup from "./pages/Warranty/WarrantyLookup.jsx";
 import PaymentPage from "./pages/Payment/Payment.jsx";
 import RepairTickets from "./pages/Repair/RepairTickets";
+import ProductPage from "./pages/ProductPage/ProductPage.jsx"; 
 function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
@@ -47,6 +48,7 @@ function AppLayout() {
           <Route path="/warranty" element={<WarrantyLookup />} />
           <Route path="/payment" element={<PaymentPage />} />
           <Route path="/repair-tickets" element={<RepairTickets />} />
+          <Route path="/products" element={<ProductPage />} />
 
           {/* 404 */}
           <Route path="*" element={<h1>404 - Không tìm thấy trang</h1>} />
