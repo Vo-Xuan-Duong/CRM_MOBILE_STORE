@@ -21,7 +21,5 @@ public class UserResponse {
     private Boolean isActive;
     private String username;
     private LocalDateTime lastLoginAt;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
     private Set<String> permissions;
 }

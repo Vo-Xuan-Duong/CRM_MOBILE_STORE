@@ -1,11 +1,7 @@
 package com.example.Backend.services;
 
-import com.example.Backend.dtos.email.EmailRequest;
-import com.example.Backend.dtos.email.EmailResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -16,11 +12,6 @@ import org.thymeleaf.context.Context;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import java.io.File;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -32,10 +23,13 @@ public class EmailService {
     @Value("${app.email.from}")
     private String fromEmail;
 
-    @Value("${app.email.base-url}")
+    @Value("${app.base.url:http://localhost:8080}")
     private String baseUrl;
 
-    @Value("${app.email.logo-url}")
+    @Value("${app.company.name:CRM Mobile Store}")
+    private String companyName;
+
+    @Value("${app.company.logo:https://via.placeholder.com/150x60/2563eb/ffffff?text=CRM+Store}")
     private String logoUrl;
 
     public EmailService(JavaMailSender mailSender, TemplateEngine templateEngine) {
@@ -44,357 +38,305 @@ public class EmailService {
     }
 
     /**
-     * Gửi email đơn giản (text)
+     * Gửi email OTP cho xác thực tài khoản
+     * @param toEmail Email người nhận
+     * @param customerName Tên khách hàng
+     * @param otp Mã OTP 6 số
+     * @param expiryMinutes Thời gian hết hạn OTP (phút)
      */
-    public EmailResponse sendSimpleEmail(String to, String subject, String content) {
+    public void sendOTPEmailAccountVerification(String toEmail, String customerName, String otp, int expiryMinutes) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(to);
-            message.setSubject(subject);
-            message.setText(content);
+            log.info("Sending OTP email to: {}", toEmail);
 
-            mailSender.send(message);
-            log.info("Simple email sent successfully to: {}", to);
+            // Tạo context cho Thymeleaf template
+            Context context = new Context();
 
-            return EmailResponse.builder()
-                    .id(UUID.randomUUID().toString())
-                    .to(to)
-                    .subject(subject)
-                    .status("SENT")
-                    .message("Email sent successfully")
-                    .sentAt(LocalDateTime.now())
-                    .success(true)
-                    .build();
+            // Thông tin khách hàng
+            context.setVariable("customerName", customerName != null ? customerName : "Khách hàng");
+            context.setVariable("customerEmail", toEmail);
 
-        } catch (MailException e) {
-            log.error("Failed to send simple email to: {}", to, e);
-            return createErrorResponse(to, subject, e.getMessage());
-        }
-    }
+            // Thông tin OTP
+            context.setVariable("otpCode", otp);
+            context.setVariable("expiryMinutes", expiryMinutes);
 
-    /**
-     * Gửi email HTML với template
-     */
-    public EmailResponse sendHtmlEmail(EmailRequest emailRequest) {
-        try {
-            MimeMessage mimeMessage = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(emailRequest.getTo());
-            helper.setSubject(emailRequest.getSubject());
-
-            // Set CC và BCC nếu có
-            if (emailRequest.getCc() != null && !emailRequest.getCc().isEmpty()) {
-                helper.setCc(emailRequest.getCc().toArray(new String[0]));
-            }
-            if (emailRequest.getBcc() != null && !emailRequest.getBcc().isEmpty()) {
-                helper.setBcc(emailRequest.getBcc().toArray(new String[0]));
-            }
-
-            // Xử lý template hoặc content trực tiếp
-            String emailContent;
-            if (emailRequest.getTemplateName() != null) {
-                emailContent = processTemplate(emailRequest.getTemplateName(), emailRequest.getTemplateVariables());
+            // Tách OTP thành từng ký tự để hiển thị trong các ô riêng biệt
+            if (otp != null && otp.length() == 6) {
+                context.setVariable("otp_1", String.valueOf(otp.charAt(0)));
+                context.setVariable("otp_2", String.valueOf(otp.charAt(1)));
+                context.setVariable("otp_3", String.valueOf(otp.charAt(2)));
+                context.setVariable("otp_4", String.valueOf(otp.charAt(3)));
+                context.setVariable("otp_5", String.valueOf(otp.charAt(4)));
+                context.setVariable("otp_6", String.valueOf(otp.charAt(5)));
             } else {
-                emailContent = emailRequest.getContent();
-            }
-
-            helper.setText(emailContent, emailRequest.isHtml());
-
-            // Thêm attachments nếu có
-            if (emailRequest.getAttachments() != null) {
-                for (String attachment : emailRequest.getAttachments()) {
-                    addAttachment(helper, attachment);
+                // Fallback nếu OTP không đúng định dạng
+                for (int i = 1; i <= 6; i++) {
+                    context.setVariable("otp_" + i, "0");
                 }
             }
 
-            mailSender.send(mimeMessage);
-            log.info("HTML email sent successfully to: {}", emailRequest.getTo());
+            // Thông tin công ty
+            context.setVariable("logoUrl", logoUrl);
+            context.setVariable("companyName", companyName);
 
-            return EmailResponse.builder()
-                    .id(UUID.randomUUID().toString())
-                    .to(emailRequest.getTo())
-                    .subject(emailRequest.getSubject())
-                    .status("SENT")
-                    .message("Email sent successfully")
-                    .sentAt(LocalDateTime.now())
-                    .success(true)
-                    .build();
+            // URL xác thực (có thể được sử dụng nếu có trang xác thực web)
+            String verifyUrl = baseUrl + "/verify-otp?email=" + toEmail;
+            context.setVariable("verifyUrl", verifyUrl);
 
-        } catch (MessagingException | MailException e) {
-            log.error("Failed to send HTML email to: {}", emailRequest.getTo(), e);
-            return createErrorResponse(emailRequest.getTo(), emailRequest.getSubject(), e.getMessage());
+            // Process template với context
+            String htmlContent = templateEngine.process("otp-email", context);
+
+            // Tạo và gửi email
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Mã xác thực OTP - " + companyName);
+            helper.setText(htmlContent, true); // true = HTML content
+
+            mailSender.send(message);
+
+            log.info("OTP email sent successfully to: {}", toEmail);
+
+        } catch (MessagingException e) {
+            log.error("Failed to send OTP email to: {}. Error: {}", toEmail, e.getMessage(), e);
+            throw new RuntimeException("Không thể gửi email OTP: " + e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("Unexpected error while sending OTP email to: {}. Error: {}", toEmail, e.getMessage(), e);
+            throw new RuntimeException("Lỗi không xác định khi gửi email OTP: " + e.getMessage(), e);
         }
     }
 
     /**
-     * Gửi email chào mừng cho user mới
+     * Gửi email OTP đơn giản (overloaded method)
+     * @param toEmail Email người nhận
+     * @param otp Mã OTP 6 số
      */
-    public EmailResponse sendWelcomeEmail(String to, String userName) {
+    public void sendOTPEmailAccountVerification(String toEmail, String otp) {
+        sendOTPEmailAccountVerification(toEmail, null, otp, 10); // Default 10 phút
+    }
+
+    /**
+     * Gửi email chào mừng
+     * @param toEmail Email người nhận
+     * @param customerName Tên khách hàng
+     */
+    public void sendWelcomeEmail(String toEmail, String customerName) {
         try {
+            log.info("Sending welcome email to: {}", toEmail);
+
             Context context = new Context();
-            context.setVariable("userName", userName);
-            context.setVariable("baseUrl", baseUrl);
+            context.setVariable("customerName", customerName != null ? customerName : "Khách hàng");
             context.setVariable("logoUrl", logoUrl);
+            context.setVariable("companyName", companyName);
 
-            String content = templateEngine.process("welcome-email", context);
+            String htmlContent = templateEngine.process("welcome-email", context);
 
-            EmailRequest request = EmailRequest.builder()
-                    .to(to)
-                    .subject("Chào mừng bạn đến với CRM Mobile Store!")
-                    .content(content)
-                    .isHtml(true)
-                    .build();
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            return sendHtmlEmail(request);
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Chào mừng bạn đến với " + companyName);
+            helper.setText(htmlContent, true);
+
+            mailSender.send(message);
+
+            log.info("Welcome email sent successfully to: {}", toEmail);
 
         } catch (Exception e) {
-            log.error("Failed to send welcome email to: {}", to, e);
-            return createErrorResponse(to, "Welcome Email", e.getMessage());
+            log.error("Failed to send welcome email to: {}. Error: {}", toEmail, e.getMessage(), e);
+            throw new RuntimeException("Không thể gửi email chào mừng: " + e.getMessage(), e);
         }
     }
 
     /**
-     * Gửi email reset password
+     * Gửi email reset mật khẩu
+     * @param toEmail Email người nhận
+     * @param customerName Tên khách hàng
+     * @param resetToken Token reset
      */
-    public EmailResponse sendPasswordResetEmail(String to, String userName, String resetToken) {
+    public void sendPasswordResetEmail(String toEmail, String customerName, String resetToken) {
         try {
+            log.info("Sending password reset email to: {}", toEmail);
+
             Context context = new Context();
-            context.setVariable("userName", userName);
-            context.setVariable("resetUrl", baseUrl + "/reset-password?token=" + resetToken);
-            context.setVariable("baseUrl", baseUrl);
+            context.setVariable("customerName", customerName != null ? customerName : "Khách hàng");
+            context.setVariable("resetToken", resetToken);
             context.setVariable("logoUrl", logoUrl);
+            context.setVariable("companyName", companyName);
 
-            String content = templateEngine.process("password-reset-email", context);
+            String resetUrl = baseUrl + "/reset-password?token=" + resetToken;
+            context.setVariable("resetUrl", resetUrl);
 
-            EmailRequest request = EmailRequest.builder()
-                    .to(to)
-                    .subject("Yêu cầu đặt lại mật khẩu")
-                    .content(content)
-                    .isHtml(true)
-                    .build();
+            String htmlContent = templateEngine.process("password-reset-email", context);
 
-            return sendHtmlEmail(request);
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Đặt lại mật khẩu - " + companyName);
+            helper.setText(htmlContent, true);
+
+            mailSender.send(message);
+
+            log.info("Password reset email sent successfully to: {}", toEmail);
 
         } catch (Exception e) {
-            log.error("Failed to send password reset email to: {}", to, e);
-            return createErrorResponse(to, "Password Reset Email", e.getMessage());
+            log.error("Failed to send password reset email to: {}. Error: {}", toEmail, e.getMessage(), e);
+            throw new RuntimeException("Không thể gửi email reset mật khẩu: " + e.getMessage(), e);
         }
     }
 
     /**
      * Gửi email xác nhận đơn hàng
+     * @param toEmail Email người nhận
+     * @param customerName Tên khách hàng
+     * @param orderNumber Số đơn hàng
+     * @param orderDetails Chi tiết đơn hàng
      */
-    public EmailResponse sendOrderConfirmationEmail(String to, String customerName, String orderNumber, String orderDetails) {
+    public void sendOrderConfirmationEmail(String toEmail, String customerName, String orderNumber, Object orderDetails) {
         try {
+            log.info("Sending order confirmation email to: {} for order: {}", toEmail, orderNumber);
+
             Context context = new Context();
-            context.setVariable("customerName", customerName);
+            context.setVariable("customerName", customerName != null ? customerName : "Khách hàng");
             context.setVariable("orderNumber", orderNumber);
             context.setVariable("orderDetails", orderDetails);
-            context.setVariable("baseUrl", baseUrl);
             context.setVariable("logoUrl", logoUrl);
+            context.setVariable("companyName", companyName);
 
-            String content = templateEngine.process("order-confirmation-email", context);
+            String htmlContent = templateEngine.process("order-confirmation-email", context);
 
-            EmailRequest request = EmailRequest.builder()
-                    .to(to)
-                    .subject("Xác nhận đơn hàng #" + orderNumber)
-                    .content(content)
-                    .isHtml(true)
-                    .build();
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            return sendHtmlEmail(request);
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Xác nhận đơn hàng #" + orderNumber + " - " + companyName);
+            helper.setText(htmlContent, true);
+
+            mailSender.send(message);
+
+            log.info("Order confirmation email sent successfully to: {}", toEmail);
 
         } catch (Exception e) {
-            log.error("Failed to send order confirmation email to: {}", to, e);
-            return createErrorResponse(to, "Order Confirmation Email", e.getMessage());
+            log.error("Failed to send order confirmation email to: {}. Error: {}", toEmail, e.getMessage(), e);
+            throw new RuntimeException("Không thể gửi email xác nhận đơn hàng: " + e.getMessage(), e);
         }
     }
-
     /**
      * Gửi email thông báo bảo hành
+     * @param toEmail Email người nhận
+     * @param customerName Tên khách hàng
+     * @param warrantyDetails Chi tiết bảo hành
      */
-    public EmailResponse sendWarrantyNotificationEmail(String to, String customerName, String productName, String warrantyInfo) {
+    public void sendWarrantyNotificationEmail(String toEmail, String customerName, Object warrantyDetails) {
         try {
+            log.info("Sending warranty notification email to: {}", toEmail);
+
             Context context = new Context();
-            context.setVariable("customerName", customerName);
-            context.setVariable("productName", productName);
-            context.setVariable("warrantyInfo", warrantyInfo);
-            context.setVariable("baseUrl", baseUrl);
+            context.setVariable("customerName", customerName != null ? customerName : "Khách hàng");
+            context.setVariable("warrantyDetails", warrantyDetails);
             context.setVariable("logoUrl", logoUrl);
+            context.setVariable("companyName", companyName);
 
-            String content = templateEngine.process("warranty-notification-email", context);
+            String htmlContent = templateEngine.process("warranty-notification-email", context);
 
-            EmailRequest request = EmailRequest.builder()
-                    .to(to)
-                    .subject("Thông báo bảo hành sản phẩm " + productName)
-                    .content(content)
-                    .isHtml(true)
-                    .build();
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            return sendHtmlEmail(request);
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Thông báo bảo hành - " + companyName);
+            helper.setText(htmlContent, true);
+
+            mailSender.send(message);
+
+            log.info("Warranty notification email sent successfully to: {}", toEmail);
 
         } catch (Exception e) {
-            log.error("Failed to send warranty notification email to: {}", to, e);
-            return createErrorResponse(to, "Warranty Notification Email", e.getMessage());
+            log.error("Failed to send warranty notification email to: {}. Error: {}", toEmail, e.getMessage(), e);
+            throw new RuntimeException("Không thể gửi email thông báo bảo hành: " + e.getMessage(), e);
         }
     }
-
     /**
-     * Xử lý template với variables
+     * Gửi email đơn giản (text)
+     * @param toEmail Email người nhận
+     * @param subject Tiêu đề
+     * @param message Nội dung
      */
-    private String processTemplate(String templateName, Object variables) {
-        Context context = new Context();
-        if (variables instanceof java.util.Map) {
-            @SuppressWarnings("unchecked")
-            java.util.Map<String, Object> variableMap = (java.util.Map<String, Object>) variables;
-            variableMap.forEach(context::setVariable);
-        }
-
-        // Thêm các biến mặc định
-        context.setVariable("baseUrl", baseUrl);
-        context.setVariable("logoUrl", logoUrl);
-
-        return templateEngine.process(templateName, context);
-    }
-
-    /**
-     * Thêm attachment vào email
-     */
-    private void addAttachment(MimeMessageHelper helper, String attachmentPath) throws MessagingException {
+    public void sendSimpleEmail(String toEmail, String subject, String message) {
         try {
-            File file = new File(attachmentPath);
-            if (file.exists()) {
-                FileSystemResource fileResource = new FileSystemResource(file);
-                helper.addAttachment(file.getName(), fileResource);
-            } else {
-                // Thử tìm trong classpath
-                ClassPathResource classPathResource = new ClassPathResource(attachmentPath);
-                if (classPathResource.exists()) {
-                    helper.addAttachment(attachmentPath, classPathResource);
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Failed to add attachment: {}", attachmentPath, e);
+            log.info("Sending simple email to: {}", toEmail);
+
+            SimpleMailMessage mailMessage = new SimpleMailMessage();
+            mailMessage.setFrom(fromEmail);
+            mailMessage.setTo(toEmail);
+            mailMessage.setSubject(subject);
+            mailMessage.setText(message);
+
+            mailSender.send(mailMessage);
+
+            log.info("Simple email sent successfully to: {}", toEmail);
+
+        } catch (MailException e) {
+            log.error("Failed to send simple email to: {}. Error: {}", toEmail, e.getMessage(), e);
+            throw new RuntimeException("Không thể gửi email: " + e.getMessage(), e);
         }
     }
-
-    /**
-     * Tạo response lỗi
-     */
-    private EmailResponse createErrorResponse(String to, String subject, String errorMessage) {
-        return EmailResponse.builder()
-                .id(UUID.randomUUID().toString())
-                .to(to)
-                .subject(subject)
-                .status("FAILED")
-                .message("Failed to send email: " + errorMessage)
-                .sentAt(LocalDateTime.now())
-                .success(false)
-                .build();
-    }
-
     /**
      * Kiểm tra cấu hình email
+     * @return true nếu cấu hình hợp lệ
      */
     public boolean isEmailConfigured() {
         try {
-            return mailSender != null && fromEmail != null && !fromEmail.isEmpty();
+            return fromEmail != null && !fromEmail.isEmpty() &&
+                   mailSender != null && templateEngine != null;
         } catch (Exception e) {
+            log.error("Error checking email configuration: {}", e.getMessage());
             return false;
         }
     }
 
     /**
-     * Gửi email hàng loạt
+     * Gửi email khuyến mãi
+     * @param toEmail Email người nhận
+     * @param customerName Tên khách hàng
+     * @param promotionTitle Tiêu đề khuyến mãi
+     * @param promotionDetails Chi tiết khuyến mãi
      */
-    public List<EmailResponse> sendBulkEmails(com.example.Backend.dtos.email.BulkEmailRequest bulkRequest) {
-        List<EmailResponse> responses = new ArrayList<>();
-
-        for (String recipient : bulkRequest.getRecipients()) {
-            try {
-                EmailRequest emailRequest = EmailRequest.builder()
-                        .to(recipient)
-                        .subject(bulkRequest.getSubject())
-                        .content(bulkRequest.getContent())
-                        .templateName(bulkRequest.getTemplateName())
-                        .templateVariables(bulkRequest.getTemplateVariables())
-                        .isHtml(bulkRequest.isHtml())
-                        .build();
-
-                EmailResponse response = sendHtmlEmail(emailRequest);
-                responses.add(response);
-
-                // Thêm delay nhỏ để tránh spam
-                Thread.sleep(100);
-
-            } catch (Exception e) {
-                log.error("Failed to send bulk email to: {}", recipient, e);
-                responses.add(createErrorResponse(recipient, bulkRequest.getSubject(), e.getMessage()));
-            }
-        }
-
-        return responses;
-    }
-
-    /**
-     * Gửi email marketing/promotion
-     */
-    public EmailResponse sendPromotionEmail(String to, String customerName, String promotionTitle, String promotionDetails) {
+    public void sendPromotionEmail(String toEmail, String customerName, String promotionTitle, String promotionDetails) {
         try {
+            log.info("Sending promotion email to: {}", toEmail);
+
             Context context = new Context();
-            context.setVariable("customerName", customerName);
+            context.setVariable("customerName", customerName != null ? customerName : "Khách hàng");
             context.setVariable("promotionTitle", promotionTitle);
             context.setVariable("promotionDetails", promotionDetails);
-            context.setVariable("baseUrl", baseUrl);
             context.setVariable("logoUrl", logoUrl);
+            context.setVariable("companyName", companyName);
 
-            String content = templateEngine.process("promotion-email", context);
+            // Sử dụng welcome-email template tạm thời cho promotion
+            String htmlContent = templateEngine.process("welcome-email", context);
 
-            EmailRequest request = EmailRequest.builder()
-                    .to(to)
-                    .subject("🎉 " + promotionTitle + " - Ưu đãi đặc biệt!")
-                    .content(content)
-                    .isHtml(true)
-                    .build();
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            return sendHtmlEmail(request);
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("🎉 " + promotionTitle + " - " + companyName);
+            helper.setText(htmlContent, true);
+
+            mailSender.send(message);
+
+            log.info("Promotion email sent successfully to: {}", toEmail);
 
         } catch (Exception e) {
-            log.error("Failed to send promotion email to: {}", to, e);
-            return createErrorResponse(to, "Promotion Email", e.getMessage());
+            log.error("Failed to send promotion email to: {}. Error: {}", toEmail, e.getMessage(), e);
         }
     }
 
-    /**
-     * Gửi email thông báo trạng thái đơn hàng
-     */
-    public EmailResponse sendOrderStatusUpdateEmail(String to, String customerName, String orderNumber, String newStatus, String statusMessage) {
-        try {
-            Context context = new Context();
-            context.setVariable("customerName", customerName);
-            context.setVariable("orderNumber", orderNumber);
-            context.setVariable("newStatus", newStatus);
-            context.setVariable("statusMessage", statusMessage);
-            context.setVariable("baseUrl", baseUrl);
-            context.setVariable("logoUrl", logoUrl);
 
-            String content = templateEngine.process("order-status-update-email", context);
-
-            EmailRequest request = EmailRequest.builder()
-                    .to(to)
-                    .subject("Cập nhật trạng thái đơn hàng #" + orderNumber)
-                    .content(content)
-                    .isHtml(true)
-                    .build();
-
-            return sendHtmlEmail(request);
-
-        } catch (Exception e) {
-            log.error("Failed to send order status update email to: {}", to, e);
-            return createErrorResponse(to, "Order Status Update Email", e.getMessage());
-        }
-    }
 }

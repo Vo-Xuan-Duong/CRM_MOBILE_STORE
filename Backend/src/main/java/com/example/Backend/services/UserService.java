@@ -2,20 +2,14 @@ package com.example.Backend.services;
 
 import com.example.Backend.dtos.user.UserRequest;
 import com.example.Backend.dtos.user.UserResponse;
-import com.example.Backend.events.PasswordResetRequestedEvent;
-import com.example.Backend.events.UserRegisteredEvent;
 import com.example.Backend.exceptions.UserException;
 import com.example.Backend.mappers.UserMapper;
 import com.example.Backend.models.Role;
 import com.example.Backend.models.User;
 import com.example.Backend.repositorys.RoleRepository;
 import com.example.Backend.repositorys.UserRepository;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -34,16 +27,14 @@ public class UserService{
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final RoleRepository roleRepository;
-    private final ApplicationEventPublisher eventPublisher;
     private final PasswordEncoder passwordEncoder;
 
     public UserService(UserRepository userRepository, UserMapper userMapper,
-                      RoleRepository roleRepository, ApplicationEventPublisher eventPublisher,
+                      RoleRepository roleRepository,
                       PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.roleRepository = roleRepository;
-        this.eventPublisher = eventPublisher;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -75,9 +66,6 @@ public class UserService{
         user.setRoles(roles);
 
         User savedUser = userRepository.save(user);
-
-        // Publish event
-//        eventPublisher.publishEvent(new UserRegisteredEvent(savedUser));
 
         return userMapper.toResponse(savedUser);
     }

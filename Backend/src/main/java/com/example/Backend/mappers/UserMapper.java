@@ -43,8 +43,6 @@ public class UserMapper {
                 .role(roleNames)
                 .isActive(user.getIsActive())
                 .lastLoginAt(user.getLastLoginAt())
-                .createdAt(user.getCreatedAt())
-                .updatedAt(user.getUpdatedAt())
                 .permissions(permissions)
                 .build();
     }

@@ -249,7 +249,6 @@ public class CustomerService {
                 .note(customer.getNotes())
                 .createdAt(customer.getCreatedAt())
                 .updatedAt(customer.getUpdatedAt())
-                // TODO: Tích hợp với SalesOrder để lấy thống kê đơn hàng
                 .totalOrders(0)
                 .totalSpent(0.0)
                 .lastOrderDate(null)

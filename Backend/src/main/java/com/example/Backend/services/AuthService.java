@@ -5,7 +5,6 @@ import com.example.Backend.dtos.auth.LoginRequest;
 import com.example.Backend.dtos.auth.RegisterRequest;
 import com.example.Backend.dtos.auth.ResetPasswordRequest;
 import com.example.Backend.enums.TokenType;
-import com.example.Backend.exceptions.UserException;
 import com.example.Backend.models.Role;
 import com.example.Backend.models.User;
 import com.example.Backend.repositorys.RoleRepository;
@@ -23,11 +22,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -45,6 +42,7 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
     private final EmailService emailService;
     private final UserService userService;
+    private final OtpService otpService;
 
     public AuthResponse loginHandler(LoginRequest loginRequest) {
         try {
@@ -55,6 +53,12 @@ public class AuthService {
                             loginRequest.getPassword()
                     )
             );
+
+            User user = userRepository.findByUsername(loginRequest.getUsername())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng: " + loginRequest.getUsername()));
+            if (!user.getIsActive()) {
+                throw new RuntimeException("Tài khoản chưa được kích hoạt");
+            }
 
             UserDetails userDetails = userDetailsService.loadUserByUsername(loginRequest.getUsername());
 
@@ -79,7 +83,6 @@ public class AuthService {
 
     public void registerHandler(RegisterRequest registerRequest) {
         try {
-
             // Tạo user mới
             User user = User.builder()
                     .username(registerRequest.getUsername())
@@ -97,7 +100,8 @@ public class AuthService {
             user.setRoles(roles);
 
             User savedUser = userRepository.save(user);
-            // Gửi email xác nhận đăng ký
+
+            emailService.sendOTPEmailAccountVerification(savedUser.getEmail(), otpService.generateOtp(savedUser.getEmail()));
 
         } catch (Exception e) {
             log.error("Registration failed for user: {}", registerRequest.getUsername(), e);
@@ -181,6 +185,49 @@ public class AuthService {
         }
     }
 
+    public boolean verifyAccountHandler(String email, String otp) {
+        try {
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy email trong hệ thống"));
+
+            if (user.getIsActive()) {
+                throw new RuntimeException("Tài khoản đã được kích hoạt");
+            }
+
+            if (!otpService.validateOtp(email, otp)) {
+                throw new RuntimeException("Mã OTP không hợp lệ hoặc đã hết hạn");
+            }
+
+            user.setIsActive(true);
+            userRepository.save(user);
+
+            return true;
+
+        } catch (Exception e) {
+            log.error("Account verification failed for email: {}", email, e);
+            throw new RuntimeException("Xác thực tài khoản thất bại: " + e.getMessage());
+        }
+    }
+
+    public boolean verifyForgotPasswordHandler(String email, String otp) {
+        try {
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy email trong hệ thống"));
+
+            if (!otpService.validateOtp(email, otp)) {
+                throw new RuntimeException("Mã OTP không hợp lệ hoặc đã hết hạn");
+            }
+
+            return true;
+
+        } catch (Exception e) {
+            log.error("Forgot password verification failed for email: {}", email, e);
+            throw new RuntimeException("Xác thực quên mật khẩu thất bại: " + e.getMessage());
+        }
+    }
+
+
+
     public AuthResponse refreshTokenHandler(String refreshToken) {
         try {
             if( refreshToken == null || refreshToken.isEmpty()) {
@@ -221,7 +268,6 @@ public class AuthService {
             user.setPassword(passwordEncoder.encode(resetPasswordRequest.getNewPassword()));
             userRepository.save(user);
 
-            // Xóa tất cả refresh tokens
             refreshTokenService.deleteByUserName(user.getUsername());
 
             return true;

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Xác thực OTP - CRM Mobile Store</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f8fafc;
+            font-family: Arial, Helvetica, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        table {
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+        .header {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .logo {
+            max-width: 150px;
+            height: auto;
+        }
+        .content {
+            padding: 40px 20px;
+        }
+        .otp-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .otp-box {
+            display: inline-block;
+            width: 48px;
+            height: 56px;
+            line-height: 56px;
+            font-size: 24px;
+            font-weight: 700;
+            color: #111827;
+            text-align: center;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            margin: 0 5px;
+            background-color: #f9fafb;
+        }
+        .otp-fallback {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #f3f4f6;
+            border-radius: 8px;
+            text-align: center;
+            position: relative;
+        }
+        .copy-btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: #10b981;
+            color: #ffffff;
+            text-decoration: none;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: background-color 0.2s;
+        }
+        .copy-btn:hover {
+            background-color: #059669;
+        }
+        .copy-btn:active {
+            background-color: #047857;
+        }
+        .copy-success {
+            background-color: #22c55e !important;
+        }
+        .otp-display-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            display: inline-block;
+            padding: 14px 32px;
+            background-color: #2563eb;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 16px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .footer {
+            background-color: #f8fafc;
+            padding: 30px 20px;
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+            border-top: 1px solid #e5e7eb;
+        }
+        .warning {
+            background-color: #fef3cd;
+            border: 1px solid #fbbf24;
+            color: #92400e;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        /* Responsive */
+        @media only screen and (max-width: 600px) {
+            .container {
+                width: 100% !important;
+            }
+            .content {
+                padding: 30px 15px !important;
+            }
+            .otp-box {
+                width: 40px !important;
+                height: 48px !important;
+                line-height: 48px !important;
+                font-size: 20px !important;
+                margin: 0 3px !important;
+            }
+            .copy-btn {
+                padding: 12px 20px !important;
+                font-size: 14px !important;
+                margin: 5px 0 !important;
+            }
+            .btn {
+                padding: 12px 24px !important;
+                font-size: 14px !important;
+                margin: 5px 0 !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <img th:src="${logoUrl}" alt="CRM Mobile Store" class="logo"
+                 src="https://via.placeholder.com/150x60/2563eb/ffffff?text=CRM+Store" />
+            <h1 style="color: #ffffff; margin: 20px 0 0 0; font-size: 28px; font-weight: 700;">
+                Xác thực tài khoản
+            </h1>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <h2 style="color: #111827; font-size: 24px; font-weight: 600; margin: 0 0 20px 0;">
+                Xin chào <span th:text="${customerName}">Khách hàng</span>!
+            </h2>
+
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                Bạn đã yêu cầu xác thực tài khoản tại <strong>CRM Mobile Store</strong>.
+                Vui lòng sử dụng mã OTP bên dưới để hoàn tất quá trình xác thực:
+            </p>
+
+            <!-- OTP Display -->
+            <div class="otp-container">
+                <div style="margin-bottom: 20px;">
+                    <span class="otp-box" th:text="${otp_1}">1</span>
+                    <span class="otp-box" th:text="${otp_2}">2</span>
+                    <span class="otp-box" th:text="${otp_3}">3</span>
+                    <span class="otp-box" th:text="${otp_4}">4</span>
+                    <span class="otp-box" th:text="${otp_5}">5</span>
+                    <span class="otp-box" th:text="${otp_6}">6</span>
+                </div>
+
+                <!-- Fallback OTP -->
+                <div class="otp-fallback">
+                    <p style="margin: 0; font-size: 14px; color: #6b7280;">Mã xác thực của bạn:</p>
+                    <div style="font-size: 24px; font-weight: 700; color: #111827; letter-spacing: 3px;"
+                         th:text="${otpCode}">123456</div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="text-align: center; margin: 30px 0; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
+                <!-- Copy OTP Button -->
+                <button class="copy-btn" id="copyOtpBtn" style="margin: 0;">
+                    📋 Sao chép OTP
+                </button>
+
+                <!-- Verify Button -->
+                <!--[if mso]>
+                <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml"
+                             href="#" th:href="${verifyUrl}"
+                             style="height:48px;v-text-anchor:middle;width:200px;"
+                             arcsize="17%" stroke="f" fillcolor="#2563eb">
+                    <w:anchorlock/>
+                    <center style="color:#ffffff; font-family:Arial, Helvetica, sans-serif; font-size:16px; font-weight:bold;">
+                        ✅ Xác minh ngay
+                    </center>
+                </v:roundrect>
+                <![endif]-->
+                <!--[if !mso]>-->
+                <a href="#" th:href="${verifyUrl}" class="btn" style="margin: 0;">
+                    ✅ Xác minh ngay
+                </a>
+                <!--<![endif]-->
+            </div>
+
+            <!-- Warning -->
+            <div class="warning">
+                <p style="margin: 0; font-size: 14px; font-weight: 600;">
+                    ⚠️ Lưu ý quan trọng:
+                </p>
+                <ul style="margin: 10px 0 0 0; padding-left: 20px; font-size: 14px;">
+                    <li>Mã OTP có hiệu lực trong <strong th:text="${expiryMinutes}">10</strong> phút</li>
+                    <li>Không chia sẻ mã này với bất kỳ ai</li>
+                    <li>Nếu bạn không yêu cầu xác thực, vui lòng bỏ qua email này</li>
+                </ul>
+            </div>
+
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 30px 0 0 0;">
+                Nếu bạn gặp khó khăn trong việc xác thực, vui lòng liên hệ với chúng tôi qua:
+                <br>
+                📧 Email: <a href="mailto:support@crmmobilestore.com" style="color: #2563eb;">support@crmmobilestore.com</a>
+                <br>
+                📞 Hotline: <a href="tel:+84123456789" style="color: #2563eb;">+84 123 456 789</a>
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p style="margin: 0 0 10px 0;">
+                <strong>CRM Mobile Store</strong>
+            </p>
+            <p style="margin: 0 0 10px 0;">
+                Địa chỉ: 123 Nguyễn Văn A, Quận 1, TP.HCM
+            </p>
+            <p style="margin: 0 0 20px 0;">
+                Website: <a href="https://crmmobilestore.com" style="color: #2563eb;">crmmobilestore.com</a>
+            </p>
+
+            <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 20px;">
+                <p style="margin: 0; font-size: 12px;">
+                    © 2024 CRM Mobile Store. Tất cả quyền được bảo lưu.
+                    <br>
+                    Email này được gửi đến <span th:text="${customerEmail}">customer@example.com</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('copyOtpBtn').addEventListener('click', function() {
+            // Lấy mã OTP từ phần tử hiển thị
+            const otpCode = document.querySelector('.otp-fallback div').innerText;
+
+            // Tạo một phần tử input tạm thời để sao chép mã OTP
+            const tempInput = document.createElement('input');
+            tempInput.value = otpCode;
+            document.body.appendChild(tempInput);
+
+            // Chọn và sao chép mã OTP
+            tempInput.select();
+            document.execCommand('copy');
+
+            // Xóa phần tử input tạm thời
+            document.body.removeChild(tempInput);
+
+            // Thay đổi màu nền nút để phản hồi hành động
+            const copyBtn = document.getElementById('copyOtpBtn');
+            copyBtn.classList.add('copy-success');
+            copyBtn.innerText = 'Đã sao chép!';
+
+            // Khôi phục lại văn bản nút sau 2 giây
+            setTimeout(() => {
+                copyBtn.classList.remove('copy-success');
+                copyBtn.innerText = 'Sao chép OTP';
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
